@@ -215,20 +215,22 @@ input, select, button, textarea { font-family: var(--font); font-size: inherit; 
     letter-spacing: 1px;
 }
 .form-group input, .form-group select {
-    padding: 0.35rem 0.45rem;
+    padding: 0.45rem 0.55rem;
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    font-size: 0.85rem;
-    background: #000;
-    color: var(--green);
+    font-size: 0.9rem;
+    min-height: 2.4rem;  /* touch-friendly: 38px minimum */
+    background: var(--bg);
+    color: var(--text);
     transition: border-color 0.15s;
+    -webkit-appearance: none;
 }
 .form-group input:focus, .form-group select:focus {
     outline: none;
-    border-color: var(--green);
-    box-shadow: 0 0 6px rgba(0,255,65,0.2);
+    border-color: var(--accent);
+    box-shadow: 0 0 6px var(--accent-dim);
 }
-.form-group input::placeholder { color: var(--green-dim); }
+.form-group input::placeholder { color: var(--text-muted); }
 .form-section-title {
     font-size: 0.72rem;
     color: var(--green);
@@ -241,26 +243,28 @@ input, select, button, textarea { font-family: var(--font); font-size: inherit; 
 }
 
 /* ===================================================================
-   BUTTONS (PFD style)
+   BUTTONS
    =================================================================== */
 .btn {
-    padding: 0.5rem 1.2rem;
-    border: 1px solid var(--green);
+    padding: 0.55rem 1.2rem;
+    border: 1px solid var(--accent);
     border-radius: var(--radius);
     cursor: pointer;
-    font-size: 0.82rem;
+    font-size: 0.85rem;
+    min-height: 2.4rem;  /* touch-friendly */
     text-transform: uppercase;
     letter-spacing: 2px;
     transition: all 0.15s;
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 0.4rem;
     background: transparent;
-    color: var(--green);
+    color: var(--accent);
 }
 .btn:hover {
-    background: var(--green);
-    color: #000;
+    background: var(--accent);
+    color: var(--bg);
     box-shadow: 0 0 16px rgba(0,255,65,0.3);
 }
 .btn:active { transform: scale(0.98); }
@@ -527,17 +531,100 @@ input, select, button, textarea { font-family: var(--font); font-size: inherit; 
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* ===================================================================
-   RESPONSIVE
+   RESPONSIVE — TABLET (< 1100px)
    =================================================================== */
 @media (max-width: 1100px) {
     .split { grid-template-columns: 1fr; }
     .split-3 { grid-template-columns: 1fr 1fr; }
+    .metric-row { flex-wrap: wrap; }
 }
-@media (max-width: 700px) {
-    .split-even, .split-3 { grid-template-columns: 1fr; }
-    .header { gap: 0.5rem; padding: 0.4rem 0.6rem; }
+
+/* ===================================================================
+   RESPONSIVE — MOBILE (< 768px)
+   =================================================================== */
+@media (max-width: 768px) {
+    html { font-size: 14px; }
+    .split, .split-even, .split-3 { grid-template-columns: 1fr; gap: 0.5rem; }
+    .header { gap: 0.4rem; padding: 0.4rem 0.6rem; flex-wrap: wrap; }
+    .header-logo { font-size: 1.1rem; letter-spacing: 2px; }
     .header-subtitle { display: none; }
-    .main { padding: 0.5rem; }
+    .header-mini-svg { display: none; }
+    .main { padding: 0.4rem; }
+    .card { padding: 0.6rem; }
+    .card-title { font-size: 0.85rem; }
+
+    /* Tab bar: horizontal scroll on mobile */
+    .tab-bar {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        gap: 0;
+        padding: 0 0.3rem;
+    }
+    .tab-bar::-webkit-scrollbar { display: none; }
+    .tab-btn {
+        font-size: 0.7rem;
+        padding: 0.5rem 0.6rem;
+        white-space: nowrap;
+        flex-shrink: 0;
+        letter-spacing: 1px;
+    }
+
+    /* Sub-tabs same treatment */
+    .sub-tab-bar {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+    }
+    .sub-tab-bar::-webkit-scrollbar { display: none; }
+
+    /* Readout boxes stack vertically */
+    .readout-row, .metric-row { flex-direction: column; gap: 0.4rem; }
+    .readout-box { min-width: unset; }
+    .readout-value { font-size: 1.3rem; }
+
+    /* Forms: full width inputs */
+    .form-group input, .form-group select { width: 100%; }
+    .form-row { flex-direction: column; }
+
+    /* Status bar: compact on mobile */
+    .status-bar {
+        font-size: 0.7rem;
+        padding: 0.3rem 0.5rem;
+        gap: 0.6rem;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    .status-item .status-label { display: none; }
+
+    /* Plotly charts: give them breathing room */
+    .chart-container, [id^="chart-"] {
+        min-height: 280px;
+        width: 100% !important;
+    }
+
+    /* SVG views: stack vertically instead of side-by-side */
+    .svg-views { flex-direction: column; }
+    .svg-view { width: 100%; }
+
+    /* Tables: horizontal scroll */
+    .data-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .data-table { min-width: 500px; }
+
+    /* Buttons: full width on mobile */
+    .btn-primary, .btn { width: 100%; text-align: center; }
+}
+
+/* ===================================================================
+   RESPONSIVE — SMALL MOBILE (< 480px)
+   =================================================================== */
+@media (max-width: 480px) {
+    html { font-size: 13px; }
+    .header-logo { font-size: 1rem; }
+    .tab-btn { font-size: 0.65rem; padding: 0.4rem 0.5rem; }
+    .card { padding: 0.5rem; }
+    .readout-value { font-size: 1.1rem; }
+    .status-bar { font-size: 0.65rem; }
 }
 
 /* ===================================================================
