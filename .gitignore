@@ -13,3 +13,5 @@ venv/
 *.webp
 .claude/
 refrences/
+deploy/*.pid
+deploy/logs/
