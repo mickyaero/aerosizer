@@ -1,0 +1,2069 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AeroSizer - Aircraft Conceptual Design Tool</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+<style>
+/* ===================================================================
+   CSS RESET & DARK CODING THEME VARIABLES
+   =================================================================== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+    --bg: #1e1e2e;
+    --card-bg: #181825;
+    --border: #313244;
+    --green: #a6e3a1;
+    --green-dark: #74c7a4;
+    --green-dim: #585b70;
+    --green-glow: rgba(166,227,161,0.12);
+    --green-fill: rgba(166,227,161,0.06);
+    --amber: #fab387;
+    --amber-dim: rgba(250,179,135,0.15);
+    --red: #f38ba8;
+    --cyan: #89dceb;
+    --magenta: #f5c2e7;
+    --purple: #cba6f7;
+    --teal: #94e2d5;
+    --text: #cdd6f4;
+    --text-dim: #bac2de;
+    --text-muted: #585b70;
+    --accent: #89b4fa;
+    --accent-dim: rgba(137,180,250,0.15);
+    --surface0: #313244;
+    --surface1: #45475a;
+    --overlay: #6c7086;
+    --radius: 6px;
+    --font: 'Share Tech Mono', 'Courier New', monospace;
+    --shadow-glow: 0 0 8px rgba(137,180,250,0.12);
+    --shadow-glow-strong: 0 0 16px rgba(137,180,250,0.2);
+}
+html { font-size: 15px; scroll-behavior: smooth; }
+body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    -webkit-font-smoothing: antialiased;
+}
+input, select, button, textarea { font-family: var(--font); font-size: inherit; }
+::selection { background: var(--green); color: #000; }
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--green-dim); border-radius: 3px; }
+
+/* ===================================================================
+   HEADER (PFD top bar)
+   =================================================================== */
+.header {
+    background: linear-gradient(180deg, #11111b 0%, var(--card-bg) 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 0.6rem 1.4rem;
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.4);
+}
+.header-logo {
+    font-size: 1.4rem;
+    font-weight: 700;
+    letter-spacing: 3px;
+    color: var(--accent);
+    text-shadow: 0 0 12px rgba(137,180,250,0.3);
+    white-space: nowrap;
+}
+.header-subtitle {
+    font-size: 0.8rem;
+    color: var(--overlay);
+    white-space: nowrap;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+.header-mini-svg {
+    width: 60px;
+    height: 30px;
+    margin-left: 0.5rem;
+}
+.header-preset {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.header-preset label {
+    font-size: 0.75rem;
+    color: var(--green-dim);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+.header-preset select {
+    background: #000;
+    color: var(--green);
+    border: 1px solid var(--border);
+    padding: 0.3rem 0.5rem;
+    border-radius: var(--radius);
+    font-size: 0.8rem;
+    cursor: pointer;
+}
+.header-preset select:focus { outline: none; border-color: var(--green); }
+
+/* ===================================================================
+   TAB BAR (MFD bezel buttons)
+   =================================================================== */
+.tab-bar {
+    background: #080808;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    overflow-x: auto;
+    padding: 0;
+    -webkit-overflow-scrolling: touch;
+}
+.tab-bar::-webkit-scrollbar { height: 2px; }
+.tab-bar::-webkit-scrollbar-thumb { background: var(--green-dim); }
+.tab-btn {
+    padding: 0.65rem 1.1rem;
+    font-size: 0.78rem;
+    font-weight: 400;
+    color: var(--green-dim);
+    border: none;
+    background: none;
+    cursor: pointer;
+    white-space: nowrap;
+    border-bottom: 2px solid transparent;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    transition: all 0.15s;
+    position: relative;
+}
+.tab-btn:hover { color: var(--green); background: rgba(0,255,65,0.03); }
+.tab-btn.active {
+    color: var(--green);
+    border-bottom-color: var(--green);
+    text-shadow: 0 0 8px rgba(0,255,65,0.3);
+}
+
+/* ===================================================================
+   MAIN CONTENT
+   =================================================================== */
+.main { flex: 1; padding: 0.8rem 1.2rem 4rem; max-width: 1700px; margin: 0 auto; width: 100%; }
+.tab-content { display: none; animation: fadeIn 0.2s ease; }
+.tab-content.active { display: block; }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+/* ===================================================================
+   CARDS (PFD panels)
+   =================================================================== */
+.card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-glow);
+    padding: 1rem;
+    margin-bottom: 0.8rem;
+}
+.card-title {
+    font-size: 0.82rem;
+    font-weight: 400;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--green);
+    margin-bottom: 0.6rem;
+    padding-bottom: 0.3rem;
+    border-bottom: 1px solid var(--border);
+}
+.card-ref {
+    font-size: 0.68rem;
+    color: var(--green-dim);
+    margin-top: 0.3rem;
+}
+
+/* ===================================================================
+   SECTION HEADERS (mode annunciators)
+   =================================================================== */
+.section-header {
+    display: inline-block;
+    border: 1px solid var(--green);
+    padding: 0.2rem 0.8rem;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--green);
+    margin-bottom: 0.6rem;
+    background: rgba(0,255,65,0.05);
+}
+
+/* ===================================================================
+   FORMS (PFD input style)
+   =================================================================== */
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: 0.5rem;
+}
+.form-group { display: flex; flex-direction: column; gap: 0.15rem; }
+.form-group label {
+    font-size: 0.68rem;
+    color: var(--green-dim);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+.form-group input, .form-group select {
+    padding: 0.35rem 0.45rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 0.85rem;
+    background: #000;
+    color: var(--green);
+    transition: border-color 0.15s;
+}
+.form-group input:focus, .form-group select:focus {
+    outline: none;
+    border-color: var(--green);
+    box-shadow: 0 0 6px rgba(0,255,65,0.2);
+}
+.form-group input::placeholder { color: var(--green-dim); }
+.form-section-title {
+    font-size: 0.72rem;
+    color: var(--green);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin: 0.6rem 0 0.25rem;
+    grid-column: 1 / -1;
+    padding: 0.2rem 0;
+    border-bottom: 1px solid var(--border);
+}
+
+/* ===================================================================
+   BUTTONS (PFD style)
+   =================================================================== */
+.btn {
+    padding: 0.5rem 1.2rem;
+    border: 1px solid var(--green);
+    border-radius: var(--radius);
+    cursor: pointer;
+    font-size: 0.82rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    transition: all 0.15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: transparent;
+    color: var(--green);
+}
+.btn:hover {
+    background: var(--green);
+    color: #000;
+    box-shadow: 0 0 16px rgba(0,255,65,0.3);
+}
+.btn:active { transform: scale(0.98); }
+.btn-lg { padding: 0.65rem 2rem; font-size: 0.95rem; letter-spacing: 3px; }
+.btn-amber { border-color: var(--amber); color: var(--amber); }
+.btn-amber:hover { background: var(--amber); color: #000; box-shadow: 0 0 16px rgba(255,170,0,0.3); }
+.btn-secondary {
+    border-color: var(--green-dim);
+    color: var(--green-dim);
+}
+.btn-secondary:hover { background: var(--green-dim); color: #000; }
+.btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.btn:disabled:hover { background: transparent; color: var(--green); box-shadow: none; }
+
+/* ===================================================================
+   PFD READOUT BOXES
+   =================================================================== */
+.readout {
+    border: 1px solid var(--border);
+    background: #000;
+    padding: 0.6rem 0.8rem;
+    text-align: center;
+    box-shadow: var(--shadow-glow);
+    position: relative;
+}
+.readout-label {
+    font-size: 0.65rem;
+    color: var(--green-dim);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+.readout-value {
+    font-size: 1.8rem;
+    color: var(--green);
+    text-shadow: 0 0 12px rgba(0,255,65,0.3);
+    line-height: 1.2;
+}
+.readout-sub {
+    font-size: 0.7rem;
+    color: var(--green-dim);
+}
+.readout-unit {
+    font-size: 0.7rem;
+    color: var(--green-dim);
+    margin-left: 0.2rem;
+}
+
+/* ===================================================================
+   METRIC CARDS (PFD data readouts)
+   =================================================================== */
+.metrics-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 0.6rem;
+    margin-bottom: 0.8rem;
+}
+.metric-card {
+    background: #000;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 0.6rem 0.7rem;
+    box-shadow: var(--shadow-glow);
+    text-align: center;
+}
+.metric-card .metric-label {
+    font-size: 0.65rem;
+    color: var(--green-dim);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+}
+.metric-card .metric-value {
+    font-size: 1.35rem;
+    color: var(--green);
+    margin: 0.15rem 0;
+    text-shadow: 0 0 8px rgba(0,255,65,0.2);
+}
+.metric-card .metric-sub {
+    font-size: 0.68rem;
+    color: var(--green-dim);
+}
+.metric-card.highlight { border-color: var(--green); box-shadow: var(--shadow-glow-strong); }
+.metric-card.amber { border-color: var(--amber); }
+.metric-card.amber .metric-value { color: var(--amber); text-shadow: 0 0 8px rgba(255,170,0,0.2); }
+
+/* ===================================================================
+   TABLES
+   =================================================================== */
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.78rem;
+}
+.data-table th {
+    background: rgba(0,255,65,0.05);
+    text-align: left;
+    padding: 0.4rem 0.6rem;
+    border-bottom: 1px solid var(--green-dim);
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--green-dim);
+    font-weight: 400;
+}
+.data-table td {
+    padding: 0.35rem 0.6rem;
+    border-bottom: 1px solid var(--border);
+    color: var(--green);
+}
+.data-table tr:hover { background: rgba(0,255,65,0.03); }
+.data-table td.num { text-align: right; }
+
+/* ===================================================================
+   LAYOUTS
+   =================================================================== */
+.split { display: grid; grid-template-columns: 380px 1fr; gap: 0.8rem; }
+.split-even { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; }
+.split-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.8rem; }
+.stack { display: flex; flex-direction: column; gap: 0.8rem; }
+.row { display: flex; gap: 0.8rem; align-items: flex-start; flex-wrap: wrap; }
+.flex-1 { flex: 1; min-width: 0; }
+.mt-1 { margin-top: 0.6rem; }
+.mb-1 { margin-bottom: 0.6rem; }
+
+/* ===================================================================
+   PROGRESS BAR (weight fraction bars)
+   =================================================================== */
+.frac-bar {
+    height: 16px;
+    background: rgba(0,255,65,0.08);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+    margin: 0.15rem 0;
+}
+.frac-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, rgba(0,255,65,0.3), rgba(0,255,65,0.5));
+    transition: width 0.4s ease;
+    box-shadow: 0 0 8px rgba(0,255,65,0.3) inset;
+}
+.frac-bar-fill.amber {
+    background: linear-gradient(90deg, rgba(255,170,0,0.3), rgba(255,170,0,0.5));
+    box-shadow: 0 0 8px rgba(255,170,0,0.3) inset;
+}
+.frac-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.68rem;
+    color: var(--green-dim);
+    text-transform: uppercase;
+}
+
+/* ===================================================================
+   SUB-TABS (MFD soft-keys)
+   =================================================================== */
+.sub-tabs {
+    display: flex;
+    gap: 0;
+    margin-bottom: 0.6rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+}
+.sub-tab-btn {
+    flex: 1;
+    padding: 0.4rem 0.6rem;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--green-dim);
+    background: transparent;
+    border: none;
+    border-right: 1px solid var(--border);
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: center;
+}
+.sub-tab-btn:last-child { border-right: none; }
+.sub-tab-btn:hover { background: rgba(0,255,65,0.05); color: var(--green); }
+.sub-tab-btn.active {
+    background: rgba(0,255,65,0.1);
+    color: var(--green);
+    text-shadow: 0 0 6px rgba(0,255,65,0.3);
+}
+.sub-content { display: none; }
+.sub-content.active { display: block; }
+
+/* ===================================================================
+   SVG VIEW PANELS
+   =================================================================== */
+.svg-panel {
+    border: 1px solid var(--border);
+    background: #000;
+    border-radius: var(--radius);
+    padding: 0.3rem;
+    box-shadow: var(--shadow-glow);
+    text-align: center;
+    min-height: 200px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+.svg-panel-label {
+    font-size: 0.68rem;
+    color: var(--green-dim);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    padding: 0.2rem 0;
+    border-bottom: 1px solid var(--border);
+    width: 100%;
+    margin-bottom: 0.3rem;
+}
+.svg-panel svg { max-width: 100%; height: auto; }
+
+/* ===================================================================
+   STATUS BAR (bottom PFD data readouts)
+   =================================================================== */
+.status-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(180deg, #0a0a0a 0%, #060606 100%);
+    border-top: 1px solid var(--border);
+    padding: 0.3rem 1.2rem;
+    display: flex;
+    gap: 1.5rem;
+    align-items: center;
+    z-index: 1000;
+    box-shadow: 0 -2px 12px rgba(0,0,0,0.5);
+}
+.status-item {
+    display: flex;
+    gap: 0.3rem;
+    align-items: baseline;
+}
+.status-label {
+    font-size: 0.65rem;
+    color: var(--green-dim);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+.status-value {
+    font-size: 0.9rem;
+    color: var(--green);
+    transition: text-shadow 0.3s;
+}
+.status-value.updated { text-shadow: 0 0 12px rgba(0,255,65,0.6); }
+
+/* ===================================================================
+   LOADING SPINNER
+   =================================================================== */
+.spinner {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 2px solid var(--green-dim);
+    border-top-color: var(--green);
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+    margin-right: 0.3rem;
+    vertical-align: middle;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ===================================================================
+   RESPONSIVE
+   =================================================================== */
+@media (max-width: 1100px) {
+    .split { grid-template-columns: 1fr; }
+    .split-3 { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 700px) {
+    .split-even, .split-3 { grid-template-columns: 1fr; }
+    .header { gap: 0.5rem; padding: 0.4rem 0.6rem; }
+    .header-subtitle { display: none; }
+    .main { padding: 0.5rem; }
+}
+
+/* ===================================================================
+   PRINT STYLES (for Report tab)
+   =================================================================== */
+@media print {
+    body { background: #fff !important; color: #000 !important; }
+    .header, .tab-bar, .status-bar, .btn { display: none !important; }
+    .card { background: #fff !important; border: 1px solid #ccc !important; box-shadow: none !important; }
+    .card-title, .readout-value, .metric-card .metric-value, .data-table td { color: #000 !important; }
+    .readout-label, .metric-card .metric-label, .data-table th { color: #333 !important; }
+    .tab-content { display: block !important; }
+    .tab-content:not(#tab-report) { display: none !important; }
+    #tab-report { display: block !important; }
+}
+</style>
+</head>
+<body>
+
+<!-- ================================================================
+     HEADER
+     ================================================================ -->
+<div class="header">
+    <div class="header-logo">AEROSIZER</div>
+    <div class="header-subtitle">AIRCRAFT CONCEPTUAL DESIGN // RAYMER METHOD</div>
+    <div class="header-mini-svg" id="header-mini-aircraft"></div>
+    <div class="header-preset">
+        <label>ACFT</label>
+        <select id="preset-select" onchange="AeroSizer.loadPreset(this.value)">
+            <option value="">-- CUSTOM --</option>
+            <option value="b737">B737-800</option>
+            <option value="a320">A320neo</option>
+            <option value="b787">B787-8</option>
+        </select>
+    </div>
+</div>
+
+<!-- ================================================================
+     TAB BAR
+     ================================================================ -->
+<div class="tab-bar">
+    <button class="tab-btn active" onclick="AeroSizer.switchTab('mission')">MISSION</button>
+    <button class="tab-btn" onclick="AeroSizer.switchTab('constraints')">CONSTRAINTS</button>
+    <button class="tab-btn" onclick="AeroSizer.switchTab('aero')">AERO</button>
+    <button class="tab-btn" onclick="AeroSizer.switchTab('weights')">WEIGHTS</button>
+    <button class="tab-btn" onclick="AeroSizer.switchTab('performance')">PERFORMANCE</button>
+    <button class="tab-btn" onclick="AeroSizer.switchTab('cost')">COST</button>
+    <button class="tab-btn" onclick="AeroSizer.switchTab('aircraft')">AIRCRAFT</button>
+    <button class="tab-btn" onclick="AeroSizer.switchTab('optimization')">OPTIMIZATION</button>
+    <button class="tab-btn" onclick="AeroSizer.switchTab('report')">REPORT</button>
+</div>
+
+<!-- ================================================================
+     MAIN CONTENT
+     ================================================================ -->
+<div class="main">
+
+<!-- ============================================================ TAB: MISSION ============================================================ -->
+<div id="tab-mission" class="tab-content active">
+<div class="split">
+    <div class="stack">
+        <div class="card">
+            <div class="section-header">MISSION PARAMETERS</div>
+            <div class="form-grid">
+                <div class="form-section-title">MISSION DEFINITION</div>
+                <div class="form-group"><label>AIRCRAFT TYPE</label>
+                    <select id="m-type"><option value="jet_transport">JET TRANSPORT</option><option value="business_jet">BUSINESS JET</option><option value="military_cargo">MILITARY CARGO</option><option value="jet_fighter">JET FIGHTER</option><option value="turboprop">TURBOPROP</option></select></div>
+                <div class="form-group"><label>RANGE (KM)</label><input type="number" id="m-range" value="5765" step="100"></div>
+                <div class="form-group"><label>PASSENGERS</label><input type="number" id="m-pax" value="162" step="1"></div>
+                <div class="form-group"><label>CRUISE MACH</label><input type="number" id="m-mach" value="0.785" step="0.005"></div>
+                <div class="form-group"><label>CRUISE ALT (M)</label><input type="number" id="m-alt" value="10668" step="100"></div>
+                <div class="form-group"><label>LOITER (HR)</label><input type="number" id="m-loiter" value="0.5" step="0.1"></div>
+                <div class="form-section-title">AERODYNAMIC & PROPULSION</div>
+                <div class="form-group"><label>L/D CRUISE</label><input type="number" id="m-ld-cruise" value="" placeholder="AUTO" step="0.5"></div>
+                <div class="form-group"><label>L/D LOITER</label><input type="number" id="m-ld-loiter" value="" placeholder="AUTO" step="0.5"></div>
+                <div class="form-group"><label>SFC CRUISE (1/HR)</label><input type="number" id="m-sfc-cruise" value="" placeholder="AUTO" step="0.01"></div>
+                <div class="form-group"><label>SFC LOITER (1/HR)</label><input type="number" id="m-sfc-loiter" value="" placeholder="AUTO" step="0.01"></div>
+                <div class="form-section-title">CREW & PAYLOAD</div>
+                <div class="form-group"><label>CREW WEIGHT (KG)</label><input type="number" id="m-crew-wt" value="" placeholder="AUTO" step="10"></div>
+                <div class="form-group"><label>EXTRA PAYLOAD (KG)</label><input type="number" id="m-extra-payload" value="0" step="100"></div>
+            </div>
+            <div class="mt-1">
+                <button class="btn btn-lg" onclick="AeroSizer.runSizing()" id="btn-size">SIZE AIRCRAFT</button>
+            </div>
+        </div>
+    </div>
+    <div class="stack">
+        <div id="sizing-results" style="display:none;">
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.6rem;margin-bottom:0.8rem;">
+                <div class="readout highlight">
+                    <div class="readout-label">W0 -- TOGW</div>
+                    <div class="readout-value" id="r-w0">---</div>
+                    <div class="readout-sub" id="r-w0-lb">---</div>
+                </div>
+                <div class="readout">
+                    <div class="readout-label">WE -- EMPTY</div>
+                    <div class="readout-value" id="r-we">---</div>
+                    <div class="readout-sub" id="r-we-lb">---</div>
+                </div>
+                <div class="readout">
+                    <div class="readout-label">WF -- FUEL</div>
+                    <div class="readout-value" id="r-wf">---</div>
+                    <div class="readout-sub" id="r-wf-lb">---</div>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-title">WEIGHT FRACTIONS</div>
+                <div class="frac-label"><span>WE/W0</span><span id="frac-we-val">---</span></div>
+                <div class="frac-bar"><div class="frac-bar-fill" id="frac-we-bar" style="width:0%"></div></div>
+                <div class="frac-label mt-1"><span>WF/W0</span><span id="frac-wf-val">---</span></div>
+                <div class="frac-bar"><div class="frac-bar-fill amber" id="frac-wf-bar" style="width:0%"></div></div>
+                <div class="frac-label mt-1"><span>PAYLOAD/W0</span><span id="frac-wp-val">---</span></div>
+                <div class="frac-bar"><div class="frac-bar-fill" id="frac-wp-bar" style="width:0%"></div></div>
+            </div>
+            <div class="card">
+                <div class="card-title">CONVERGENCE</div>
+                <div id="chart-convergence" style="height:220px;"></div>
+            </div>
+            <div class="card">
+                <div class="card-title">MISSION SEGMENT FRACTIONS</div>
+                <div id="chart-segments" style="height:200px;"></div>
+            </div>
+            <div class="card">
+                <div class="card-title">PARAMETERS USED</div>
+                <div class="metrics-row" id="sizing-params"></div>
+            </div>
+        </div>
+        <div id="sizing-placeholder" class="card" style="text-align:center;padding:3rem;">
+            <div style="color:var(--green-dim);font-size:1.1rem;letter-spacing:3px;text-transform:uppercase;">AWAITING SIZING INPUT</div>
+            <div style="color:var(--green-dim);font-size:0.75rem;margin-top:0.5rem;">SELECT PARAMETERS AND PRESS SIZE AIRCRAFT</div>
+        </div>
+    </div>
+</div>
+</div>
+
+<!-- ============================================================ TAB: CONSTRAINTS ============================================================ -->
+<div id="tab-constraints" class="tab-content">
+<div class="split">
+    <div class="stack">
+        <div class="card">
+            <div class="section-header">CONSTRAINT PARAMETERS</div>
+            <div class="form-grid">
+                <div class="form-section-title">AERODYNAMICS</div>
+                <div class="form-group"><label>CD0</label><input type="number" id="c-cd0" value="0.022" step="0.001"></div>
+                <div class="form-group"><label>K (INDUCED)</label><input type="number" id="c-k" value="0.042" step="0.001"></div>
+                <div class="form-group"><label>CLMAX CLEAN</label><input type="number" id="c-clmax" value="1.5" step="0.1"></div>
+                <div class="form-group"><label>CLMAX TAKEOFF</label><input type="number" id="c-clto" value="1.8" step="0.1"></div>
+                <div class="form-group"><label>CLMAX LANDING</label><input type="number" id="c-clland" value="2.3" step="0.1"></div>
+                <div class="form-section-title">PERFORMANCE REQUIREMENTS</div>
+                <div class="form-group"><label>CRUISE MACH</label><input type="number" id="c-mach" value="0.785" step="0.005"></div>
+                <div class="form-group"><label>CRUISE ALT (M)</label><input type="number" id="c-alt" value="10668" step="100"></div>
+                <div class="form-group"><label>TAKEOFF DIST (M)</label><input type="number" id="c-to-dist" value="2300" step="100"></div>
+                <div class="form-group"><label>LANDING DIST (M)</label><input type="number" id="c-land-dist" value="1600" step="100"></div>
+                <div class="form-group"><label>OEI GRADIENT</label><input type="number" id="c-oei" value="0.024" step="0.001"></div>
+                <div class="form-group"><label>SVC CEILING (M)</label><input type="number" id="c-ceil" value="12496" step="100"></div>
+                <div class="form-group"><label>N ENGINES</label><input type="number" id="c-neng" value="2" step="1"></div>
+                <div class="form-group"><label>THRUST LAPSE</label><input type="number" id="c-lapse" value="0.26" step="0.01"></div>
+            </div>
+            <div class="mt-1">
+                <button class="btn" onclick="AeroSizer.runConstraints()">ANALYZE CONSTRAINTS</button>
+            </div>
+        </div>
+    </div>
+    <div class="stack">
+        <div class="card">
+            <div class="card-title">T/W VS W/S CONSTRAINT DIAGRAM</div>
+            <div id="chart-constraints" style="height:500px;"></div>
+            <div class="card-ref">RAYMER CH 5 -- THRUST-TO-WEIGHT VS WING LOADING</div>
+        </div>
+        <div class="metrics-row" id="constraint-metrics"></div>
+    </div>
+</div>
+</div>
+
+<!-- ============================================================ TAB: AERODYNAMICS ============================================================ -->
+<div id="tab-aero" class="tab-content">
+<div class="split">
+    <div class="stack">
+        <div class="card">
+            <div class="section-header">DRAG POLAR PARAMETERS</div>
+            <div class="form-grid">
+                <div class="form-group"><label>CD0</label><input type="number" id="a-cd0" value="0.022" step="0.001"></div>
+                <div class="form-group"><label>K</label><input type="number" id="a-k" value="0.042" step="0.001"></div>
+                <div class="form-group"><label>dCD0 TAKEOFF</label><input type="number" id="a-dcd0to" value="0.02" step="0.005"></div>
+                <div class="form-group"><label>dCD0 LANDING</label><input type="number" id="a-dcd0land" value="0.07" step="0.005"></div>
+            </div>
+            <div class="mt-1">
+                <button class="btn" onclick="AeroSizer.runAero()">COMPUTE POLAR</button>
+            </div>
+        </div>
+        <div class="card" id="aero-metrics-card" style="display:none;">
+            <div class="card-title">KEY AERODYNAMIC DATA</div>
+            <div class="metrics-row" id="aero-metrics"></div>
+        </div>
+    </div>
+    <div class="stack">
+        <div class="card"><div class="card-title">DRAG POLAR -- CD VS CL</div><div id="chart-polar" style="height:350px;"></div></div>
+        <div class="card"><div class="card-title">L/D VS CL</div><div id="chart-ld" style="height:300px;"></div></div>
+    </div>
+</div>
+</div>
+
+<!-- ============================================================ TAB: WEIGHTS ============================================================ -->
+<div id="tab-weights" class="tab-content">
+<div class="split">
+    <div class="stack">
+        <div class="card">
+            <div class="section-header">WEIGHT PARAMETERS</div>
+            <div class="form-grid">
+                <div class="form-section-title">PRIMARY</div>
+                <div class="form-group"><label>W0 (KG)</label><input type="number" id="w-w0" value="79016" step="100"></div>
+                <div class="form-group"><label>WF (KG)</label><input type="number" id="w-wf" value="20000" step="100"></div>
+                <div class="form-group"><label>AR</label><input type="number" id="w-ar" value="9.45" step="0.1"></div>
+                <div class="form-group"><label>SREF (M2)</label><input type="number" id="w-sref" value="124.6" step="1"></div>
+                <div class="form-group"><label>SWEEP (DEG)</label><input type="number" id="w-sweep" value="25.0" step="1"></div>
+                <div class="form-group"><label>TAPER</label><input type="number" id="w-taper" value="0.278" step="0.01"></div>
+                <div class="form-group"><label>T/C ROOT</label><input type="number" id="w-tc" value="0.128" step="0.005"></div>
+                <div class="form-section-title">FUSELAGE</div>
+                <div class="form-group"><label>FUSE LEN (M)</label><input type="number" id="w-flen" value="38.02" step="0.5"></div>
+                <div class="form-group"><label>FUSE WIDTH (M)</label><input type="number" id="w-fwid" value="3.76" step="0.1"></div>
+                <div class="form-group"><label>FUSE DEPTH (M)</label><input type="number" id="w-fdep" value="4.01" step="0.1"></div>
+                <div class="form-section-title">EMPENNAGE</div>
+                <div class="form-group"><label>SHT (M2)</label><input type="number" id="w-sht" value="32.4" step="1"></div>
+                <div class="form-group"><label>SVT (M2)</label><input type="number" id="w-svt" value="23.1" step="1"></div>
+                <div class="form-section-title">ENGINES</div>
+                <div class="form-group"><label>N ENGINES</label><input type="number" id="w-neng" value="2" step="1"></div>
+                <div class="form-group"><label>ENG WT EA (KG)</label><input type="number" id="w-engwt" value="2370" step="50"></div>
+                <div class="form-group"><label>THRUST EA (N)</label><input type="number" id="w-thrust" value="121400" step="1000"></div>
+                <div class="form-group"><label>N PAX</label><input type="number" id="w-npax" value="162" step="1"></div>
+            </div>
+            <div class="mt-1">
+                <button class="btn" onclick="AeroSizer.runWeights()">COMPUTE WEIGHTS</button>
+            </div>
+        </div>
+    </div>
+    <div class="stack">
+        <div class="card"><div class="card-title">COMPONENT WEIGHT BREAKDOWN</div><div id="chart-weights" style="height:400px;"></div></div>
+        <div class="card" id="weights-table-card" style="display:none;"><div class="card-title">WEIGHT STATEMENT</div><div id="weights-table"></div></div>
+    </div>
+</div>
+</div>
+
+<!-- ============================================================ TAB: PERFORMANCE ============================================================ -->
+<div id="tab-performance" class="tab-content">
+<div class="sub-tabs">
+    <button class="sub-tab-btn active" onclick="AeroSizer.switchSubTab('performance','perf-toland')">TO / LAND</button>
+    <button class="sub-tab-btn" onclick="AeroSizer.switchSubTab('performance','perf-climb')">CLIMB</button>
+    <button class="sub-tab-btn" onclick="AeroSizer.switchSubTab('performance','perf-range')">RANGE</button>
+    <button class="sub-tab-btn" onclick="AeroSizer.switchSubTab('performance','perf-turn')">TURN</button>
+    <button class="sub-tab-btn" onclick="AeroSizer.switchSubTab('performance','perf-ps')">PS DIAGRAM</button>
+</div>
+
+<!-- SUB: TO/LAND -->
+<div id="perf-toland" class="sub-content active">
+<div class="split">
+    <div class="card">
+        <div class="section-header">TO/LAND PARAMETERS</div>
+        <div class="form-grid">
+            <div class="form-group"><label>W (KG)</label><input type="number" id="tl-w" value="79016" step="100"></div>
+            <div class="form-group"><label>S (M2)</label><input type="number" id="tl-s" value="124.6" step="1"></div>
+            <div class="form-group"><label>T (N)</label><input type="number" id="tl-t" value="242800" step="1000"></div>
+            <div class="form-group"><label>CD0</label><input type="number" id="tl-cd0" value="0.022" step="0.001"></div>
+            <div class="form-group"><label>K</label><input type="number" id="tl-k" value="0.042" step="0.001"></div>
+            <div class="form-group"><label>CLMAX TO</label><input type="number" id="tl-clto" value="1.8" step="0.1"></div>
+            <div class="form-group"><label>CLMAX LAND</label><input type="number" id="tl-clland" value="2.3" step="0.1"></div>
+        </div>
+        <div class="mt-1"><button class="btn" onclick="AeroSizer.runTakeoffLanding()">COMPUTE</button></div>
+    </div>
+    <div class="stack" id="tl-results"></div>
+</div>
+</div>
+
+<!-- SUB: CLIMB -->
+<div id="perf-climb" class="sub-content">
+<div class="split">
+    <div class="card">
+        <div class="section-header">CLIMB PARAMETERS</div>
+        <div class="form-grid">
+            <div class="form-group"><label>W (KG)</label><input type="number" id="cl-w" value="79016" step="100"></div>
+            <div class="form-group"><label>S (M2)</label><input type="number" id="cl-s" value="124.6" step="1"></div>
+            <div class="form-group"><label>T SL (N)</label><input type="number" id="cl-t" value="242800" step="1000"></div>
+            <div class="form-group"><label>CD0</label><input type="number" id="cl-cd0" value="0.022" step="0.001"></div>
+            <div class="form-group"><label>K</label><input type="number" id="cl-k" value="0.042" step="0.001"></div>
+        </div>
+        <div class="mt-1"><button class="btn" onclick="AeroSizer.runClimb()">COMPUTE</button></div>
+    </div>
+    <div class="stack">
+        <div class="card"><div class="card-title">ROC VS ALTITUDE</div><div id="chart-climb" style="height:400px;"></div></div>
+        <div class="metrics-row" id="climb-metrics"></div>
+    </div>
+</div>
+</div>
+
+<!-- SUB: RANGE -->
+<div id="perf-range" class="sub-content">
+<div class="split">
+    <div class="card">
+        <div class="section-header">RANGE-PAYLOAD PARAMETERS</div>
+        <div class="form-grid">
+            <div class="form-group"><label>W0 (KG)</label><input type="number" id="rp-w0" value="79016" step="100"></div>
+            <div class="form-group"><label>WE (KG)</label><input type="number" id="rp-we" value="41413" step="100"></div>
+            <div class="form-group"><label>WF MAX (KG)</label><input type="number" id="rp-wf" value="20000" step="100"></div>
+            <div class="form-group"><label>SFC (1/HR)</label><input type="number" id="rp-sfc" value="0.575" step="0.01"></div>
+            <div class="form-group"><label>V CRUISE (M/S)</label><input type="number" id="rp-v" value="236" step="1"></div>
+            <div class="form-group"><label>CD0</label><input type="number" id="rp-cd0" value="0.022" step="0.001"></div>
+            <div class="form-group"><label>K</label><input type="number" id="rp-k" value="0.042" step="0.001"></div>
+        </div>
+        <div class="mt-1"><button class="btn" onclick="AeroSizer.runRange()">COMPUTE</button></div>
+    </div>
+    <div class="stack">
+        <div class="card"><div class="card-title">RANGE-PAYLOAD DIAGRAM</div><div id="chart-range" style="height:400px;"></div></div>
+    </div>
+</div>
+</div>
+
+<!-- SUB: TURN -->
+<div id="perf-turn" class="sub-content">
+<div class="split">
+    <div class="card">
+        <div class="section-header">TURN PARAMETERS</div>
+        <div class="form-grid">
+            <div class="form-group"><label>W (KG)</label><input type="number" id="tu-w" value="79016" step="100"></div>
+            <div class="form-group"><label>S (M2)</label><input type="number" id="tu-s" value="124.6" step="1"></div>
+            <div class="form-group"><label>T (N)</label><input type="number" id="tu-t" value="242800" step="1000"></div>
+            <div class="form-group"><label>CD0</label><input type="number" id="tu-cd0" value="0.022" step="0.001"></div>
+            <div class="form-group"><label>K</label><input type="number" id="tu-k" value="0.042" step="0.001"></div>
+            <div class="form-group"><label>CLMAX</label><input type="number" id="tu-clmax" value="1.5" step="0.1"></div>
+            <div class="form-group"><label>N LIMIT</label><input type="number" id="tu-nlim" value="2.5" step="0.1"></div>
+        </div>
+        <div class="mt-1"><button class="btn" onclick="AeroSizer.runTurn()">COMPUTE</button></div>
+    </div>
+    <div class="stack">
+        <div class="card"><div class="card-title">TURN RATE VS VELOCITY</div><div id="chart-turn" style="height:400px;"></div></div>
+        <div class="metrics-row" id="turn-metrics"></div>
+    </div>
+</div>
+</div>
+
+<!-- SUB: PS DIAGRAM -->
+<div id="perf-ps" class="sub-content">
+<div class="split">
+    <div class="card">
+        <div class="section-header">PS DIAGRAM PARAMETERS</div>
+        <div class="form-grid">
+            <div class="form-group"><label>W (KG)</label><input type="number" id="ps-w" value="79016" step="100"></div>
+            <div class="form-group"><label>S (M2)</label><input type="number" id="ps-s" value="124.6" step="1"></div>
+            <div class="form-group"><label>T (N)</label><input type="number" id="ps-t" value="242800" step="1000"></div>
+            <div class="form-group"><label>CD0</label><input type="number" id="ps-cd0" value="0.022" step="0.001"></div>
+            <div class="form-group"><label>K</label><input type="number" id="ps-k" value="0.042" step="0.001"></div>
+        </div>
+        <div class="mt-1"><button class="btn" onclick="AeroSizer.runPs()">COMPUTE</button></div>
+    </div>
+    <div class="stack">
+        <div class="card"><div class="card-title">SPECIFIC EXCESS POWER</div><div id="chart-ps" style="height:400px;"></div></div>
+    </div>
+</div>
+</div>
+</div>
+
+<!-- ============================================================ TAB: COST ============================================================ -->
+<div id="tab-cost" class="tab-content">
+<div class="split">
+    <div class="stack">
+        <div class="card">
+            <div class="section-header">DAPCA IV PARAMETERS</div>
+            <div class="form-grid">
+                <div class="form-group"><label>WE (KG)</label><input type="number" id="co-we" value="41413" step="100"></div>
+                <div class="form-group"><label>V MAX (M/S)</label><input type="number" id="co-vmax" value="236" step="1"></div>
+                <div class="form-group"><label>PRODUCTION QTY</label><input type="number" id="co-q" value="5000" step="100"></div>
+                <div class="form-group"><label>FTA</label><input type="number" id="co-fta" value="4" step="1"></div>
+                <div class="form-group"><label>N ENGINES</label><input type="number" id="co-neng" value="2" step="1"></div>
+                <div class="form-group"><label>T MAX (N)</label><input type="number" id="co-tmax" value="121400" step="1000"></div>
+                <div class="form-group"><label>CPI FACTOR</label><input type="number" id="co-cpi" value="1.35" step="0.05"></div>
+                <div class="form-group"><label>N PAX</label><input type="number" id="co-npax" value="162" step="1"></div>
+            </div>
+            <div class="mt-1">
+                <button class="btn" onclick="AeroSizer.runCostDAPCA()">COMPUTE DAPCA</button>
+            </div>
+        </div>
+        <div class="card">
+            <div class="section-header">OPERATING COST PARAMETERS</div>
+            <div class="form-grid">
+                <div class="form-group"><label>W0 (KG)</label><input type="number" id="oc-w0" value="79016" step="100"></div>
+                <div class="form-group"><label>WE (KG)</label><input type="number" id="oc-we" value="41413" step="100"></div>
+                <div class="form-group"><label>WF MISSION (KG)</label><input type="number" id="oc-wf" value="15000" step="100"></div>
+                <div class="form-group"><label>V CRUISE (M/S)</label><input type="number" id="oc-v" value="236" step="1"></div>
+                <div class="form-group"><label>RANGE (KM)</label><input type="number" id="oc-range" value="5765" step="100"></div>
+                <div class="form-group"><label>FUEL $/KG</label><input type="number" id="oc-fuel" value="0.80" step="0.05"></div>
+                <div class="form-group"><label>ACFT COST ($)</label><input type="number" id="oc-acost" value="106100000" step="1000000"></div>
+            </div>
+            <div class="mt-1">
+                <button class="btn" onclick="AeroSizer.runCostOperating()">COMPUTE DOC</button>
+            </div>
+        </div>
+    </div>
+    <div class="stack" id="cost-results">
+        <div class="card" style="text-align:center;padding:2rem;"><div style="color:var(--green-dim);">RUN COST ANALYSIS TO SEE RESULTS</div></div>
+    </div>
+</div>
+</div>
+
+<!-- ============================================================ TAB: AIRCRAFT (SVG VISUALIZATION) ============================================================ -->
+<div id="tab-aircraft" class="tab-content">
+<div class="split">
+    <div class="stack">
+        <div class="card">
+            <div class="section-header">GEOMETRY INPUTS</div>
+            <div class="mt-1 mb-1">
+                <button class="btn btn-amber" onclick="AeroSizer.computeGeometryFromSizing()">COMPUTE FROM SIZING</button>
+            </div>
+            <div class="form-grid">
+                <div class="form-section-title">WING</div>
+                <div class="form-group"><label>SPAN (M)</label><input type="number" id="g-span" value="34.3" step="0.5" oninput="AeroSizer.debouncedUpdateSVG()"></div>
+                <div class="form-group"><label>ROOT CHORD (M)</label><input type="number" id="g-rootc" value="7.3" step="0.1" oninput="AeroSizer.debouncedUpdateSVG()"></div>
+                <div class="form-group"><label>TIP CHORD (M)</label><input type="number" id="g-tipc" value="2.0" step="0.1" oninput="AeroSizer.debouncedUpdateSVG()"></div>
+                <div class="form-group"><label>SWEEP QC (DEG)</label><input type="number" id="g-sweep" value="25" step="1" oninput="AeroSizer.debouncedUpdateSVG()"></div>
+                <div class="form-group"><label>WING POS FRAC</label><input type="number" id="g-wingpos" value="0.40" step="0.01" oninput="AeroSizer.debouncedUpdateSVG()"></div>
+                <div class="form-section-title">FUSELAGE</div>
+                <div class="form-group"><label>LENGTH (M)</label><input type="number" id="g-fuselen" value="38.0" step="0.5" oninput="AeroSizer.debouncedUpdateSVG()"></div>
+                <div class="form-group"><label>WIDTH (M)</label><input type="number" id="g-fusew" value="3.76" step="0.1" oninput="AeroSizer.debouncedUpdateSVG()"></div>
+                <div class="form-section-title">HORIZONTAL TAIL</div>
+                <div class="form-group"><label>HT SPAN (M)</label><input type="number" id="g-htspan" value="11.4" step="0.5" oninput="AeroSizer.debouncedUpdateSVG()"></div>
+                <div class="form-group"><label>HT ROOT (M)</label><input type="number" id="g-htroot" value="3.5" step="0.1" oninput="AeroSizer.debouncedUpdateSVG()"></div>
+                <div class="form-group"><label>HT TIP (M)</label><input type="number" id="g-httip" value="1.4" step="0.1" oninput="AeroSizer.debouncedUpdateSVG()"></div>
+                <div class="form-group"><label>HT SWEEP (DEG)</label><input type="number" id="g-htsweep" value="30" step="1" oninput="AeroSizer.debouncedUpdateSVG()"></div>
+                <div class="form-section-title">VERTICAL TAIL</div>
+                <div class="form-group"><label>VT HEIGHT (M)</label><input type="number" id="g-vth" value="6.3" step="0.1" oninput="AeroSizer.debouncedUpdateSVG()"></div>
+                <div class="form-group"><label>VT ROOT (M)</label><input type="number" id="g-vtroot" value="5.2" step="0.1" oninput="AeroSizer.debouncedUpdateSVG()"></div>
+                <div class="form-group"><label>VT TIP (M)</label><input type="number" id="g-vttip" value="2.0" step="0.1" oninput="AeroSizer.debouncedUpdateSVG()"></div>
+                <div class="form-group"><label>VT SWEEP (DEG)</label><input type="number" id="g-vtsweep" value="40" step="1" oninput="AeroSizer.debouncedUpdateSVG()"></div>
+                <div class="form-section-title">ENGINES</div>
+                <div class="form-group"><label>ENG DIA (M)</label><input type="number" id="g-engdia" value="1.73" step="0.1" oninput="AeroSizer.debouncedUpdateSVG()"></div>
+                <div class="form-group"><label>ENG LEN (M)</label><input type="number" id="g-englen" value="3.5" step="0.1" oninput="AeroSizer.debouncedUpdateSVG()"></div>
+                <div class="form-group"><label>N ENGINES</label><input type="number" id="g-neng" value="2" step="1" oninput="AeroSizer.debouncedUpdateSVG()"></div>
+            </div>
+        </div>
+        <div class="card" id="geom-summary-card" style="display:none;">
+            <div class="card-title">GEOMETRY SUMMARY</div>
+            <div id="geom-summary-table"></div>
+        </div>
+    </div>
+    <div class="stack">
+        <div class="section-header">THREE-VIEW DRAWING</div>
+        <div class="split-3">
+            <div class="svg-panel"><div class="svg-panel-label">TOP VIEW</div><div id="top-view"></div></div>
+            <div class="svg-panel"><div class="svg-panel-label">SIDE VIEW</div><div id="side-view"></div></div>
+            <div class="svg-panel"><div class="svg-panel-label">FRONT VIEW</div><div id="front-view"></div></div>
+        </div>
+    </div>
+</div>
+</div>
+
+<!-- ============================================================ TAB: OPTIMIZATION ============================================================ -->
+<div id="tab-optimization" class="tab-content">
+<div class="sub-tabs">
+    <button class="sub-tab-btn active" onclick="AeroSizer.switchSubTab('optimization','opt-carpet')">CARPET PLOT</button>
+    <button class="sub-tab-btn" onclick="AeroSizer.switchSubTab('optimization','opt-trade')">TRADE STUDIES</button>
+</div>
+
+<div id="opt-carpet" class="sub-content active">
+<div class="split">
+    <div class="card">
+        <div class="section-header">CARPET PLOT PARAMETERS</div>
+        <div class="form-grid">
+            <div class="form-group"><label>AIRCRAFT TYPE</label><select id="cp-type"><option value="jet_transport">JET TRANSPORT</option></select></div>
+            <div class="form-group"><label>RANGE (KM)</label><input type="number" id="cp-range" value="5765" step="100"></div>
+            <div class="form-group"><label>PASSENGERS</label><input type="number" id="cp-pax" value="162" step="1"></div>
+            <div class="form-group"><label>CRUISE MACH</label><input type="number" id="cp-mach" value="0.785" step="0.005"></div>
+            <div class="form-group"><label>CRUISE ALT (M)</label><input type="number" id="cp-alt" value="10668" step="100"></div>
+            <div class="form-section-title">SWEEP RANGES</div>
+            <div class="form-group"><label>L/D MIN</label><input type="number" id="cp-ld-min" value="14" step="1"></div>
+            <div class="form-group"><label>L/D MAX</label><input type="number" id="cp-ld-max" value="22" step="1"></div>
+            <div class="form-group"><label>SFC MIN</label><input type="number" id="cp-sfc-min" value="0.45" step="0.01"></div>
+            <div class="form-group"><label>SFC MAX</label><input type="number" id="cp-sfc-max" value="0.70" step="0.01"></div>
+        </div>
+        <div class="mt-1">
+            <button class="btn" onclick="AeroSizer.generateCarpetPlot()" id="btn-carpet">GENERATE CARPET PLOT</button>
+        </div>
+    </div>
+    <div class="stack">
+        <div class="card"><div class="card-title">SIZING CARPET PLOT -- W0 VS L/D AND SFC</div><div id="chart-carpet" style="height:500px;"></div></div>
+    </div>
+</div>
+</div>
+
+<div id="opt-trade" class="sub-content">
+<div class="split">
+    <div class="card">
+        <div class="section-header">TRADE STUDY PARAMETERS</div>
+        <div class="form-grid">
+            <div class="form-group"><label>PARAMETER</label>
+                <select id="ts-param">
+                    <option value="range_km">RANGE (KM)</option>
+                    <option value="passengers">PASSENGERS</option>
+                    <option value="cruise_mach">CRUISE MACH</option>
+                    <option value="ld_cruise">L/D CRUISE</option>
+                    <option value="sfc_cruise">SFC CRUISE</option>
+                    <option value="payload_extra_kg">DEAD WEIGHT (KG)</option>
+                </select>
+            </div>
+            <div class="form-group"><label>BASELINE VALUE</label><input type="number" id="ts-baseline" value="5765" step="100"></div>
+            <div class="form-group"><label>SWEEP MIN</label><input type="number" id="ts-min" value="3000" step="100"></div>
+            <div class="form-group"><label>SWEEP MAX</label><input type="number" id="ts-max" value="9000" step="100"></div>
+            <div class="form-group"><label>N POINTS</label><input type="number" id="ts-n" value="15" step="1"></div>
+        </div>
+        <div class="mt-1">
+            <button class="btn" onclick="AeroSizer.runTradeStudy()" id="btn-trade">RUN TRADE STUDY</button>
+        </div>
+    </div>
+    <div class="stack">
+        <div class="card"><div class="card-title">TRADE STUDY RESULT</div><div id="chart-trade" style="height:450px;"></div></div>
+        <div class="metrics-row" id="trade-metrics"></div>
+    </div>
+</div>
+</div>
+</div>
+
+<!-- ============================================================ TAB: REPORT ============================================================ -->
+<div id="tab-report" class="tab-content">
+<div class="card" style="max-width:900px;margin:0 auto;">
+    <div class="card-title">DESIGN REPORT</div>
+    <div id="report-content">
+        <div style="text-align:center;padding:2rem;color:var(--green-dim);">RUN SIZING AND OTHER ANALYSES FIRST, THEN VIEW THE REPORT.</div>
+    </div>
+    <div class="mt-1 row" style="gap:0.5rem;">
+        <button class="btn" onclick="AeroSizer.generateReport()">GENERATE REPORT</button>
+        <button class="btn btn-secondary" onclick="AeroSizer.exportJSON()">EXPORT JSON</button>
+        <button class="btn btn-secondary" onclick="window.print()">PRINT</button>
+    </div>
+</div>
+</div>
+
+</div><!-- end .main -->
+
+<!-- ================================================================
+     STATUS BAR
+     ================================================================ -->
+<div class="status-bar">
+    <div class="status-item"><span class="status-label">W0</span><span class="status-value" id="sb-w0">---</span></div>
+    <div class="status-item"><span class="status-label">WE</span><span class="status-value" id="sb-we">---</span></div>
+    <div class="status-item"><span class="status-label">WF</span><span class="status-value" id="sb-wf">---</span></div>
+    <div class="status-item"><span class="status-label">WE/W0</span><span class="status-value" id="sb-we-frac">---</span></div>
+    <div class="status-item"><span class="status-label">WF/W0</span><span class="status-value" id="sb-wf-frac">---</span></div>
+    <div class="status-item" style="margin-left:auto;"><span class="status-label">STATUS</span><span class="status-value" id="sb-status" style="color:var(--green-dim);">READY</span></div>
+</div>
+
+<!-- ================================================================
+     JAVASCRIPT
+     ================================================================ -->
+<script>
+// ===========================================================================
+// PFD Plotly Theme
+// ===========================================================================
+const PFD_LAYOUT = {
+    paper_bgcolor: '#1e1e2e',
+    plot_bgcolor: '#181825',
+    font: {family: 'Share Tech Mono, Courier New, monospace', color: '#cdd6f4', size: 13},
+    xaxis: {gridcolor: '#313244', zerolinecolor: '#45475a', color: '#bac2de', linecolor: '#313244'},
+    yaxis: {gridcolor: '#313244', zerolinecolor: '#45475a', color: '#bac2de', linecolor: '#313244'},
+    colorway: ['#89b4fa', '#a6e3a1', '#fab387', '#f38ba8', '#cba6f7', '#94e2d5', '#f5c2e7', '#89dceb'],
+    margin: {l: 65, r: 30, t: 45, b: 55},
+    legend: {bgcolor: 'rgba(24,24,37,0.8)', bordercolor: '#313244', borderwidth: 1, font: {size: 12}},
+};
+const PFD_CONFIG = {responsive: true, displaylogo: false, modeBarButtonsToRemove: ['lasso2d', 'select2d']};
+
+function pfdLayout(overrides = {}) {
+    const base = JSON.parse(JSON.stringify(PFD_LAYOUT));
+    // Deep merge overrides
+    for (const key of Object.keys(overrides)) {
+        if (typeof overrides[key] === 'object' && !Array.isArray(overrides[key]) && base[key]) {
+            Object.assign(base[key], overrides[key]);
+        } else {
+            base[key] = overrides[key];
+        }
+    }
+    return base;
+}
+
+// ===========================================================================
+// Utility Functions
+// ===========================================================================
+function $(id) { return document.getElementById(id); }
+function val(id) { const v = $(id)?.value; return v === '' ? null : parseFloat(v); }
+function valStr(id) { return $(id)?.value || ''; }
+function fmt(n, d = 0) { return n != null ? Number(n).toLocaleString('en-US', {minimumFractionDigits: d, maximumFractionDigits: d}) : '---'; }
+function fmtKg(kg) { return fmt(kg, 0) + ' KG'; }
+function kgToLb(kg) { return kg * 2.20462; }
+
+function setStatus(msg, color) {
+    $('sb-status').textContent = msg;
+    $('sb-status').style.color = color || 'var(--green)';
+}
+
+function flashStatusValue(id) {
+    const el = $(id);
+    if (!el) return;
+    el.classList.add('updated');
+    setTimeout(() => el.classList.remove('updated'), 600);
+}
+
+function updateStatusBar(data) {
+    if (!data) return;
+    $('sb-w0').textContent = fmt(data.W0_kg, 0);
+    $('sb-we').textContent = fmt(data.We_kg, 0);
+    $('sb-wf').textContent = fmt(data.Wf_kg, 0);
+    $('sb-we-frac').textContent = (data.We_fraction * 100).toFixed(1) + '%';
+    $('sb-wf-frac').textContent = (data.Wf_fraction * 100).toFixed(1) + '%';
+    ['sb-w0','sb-we','sb-wf','sb-we-frac','sb-wf-frac'].forEach(flashStatusValue);
+}
+
+// ===========================================================================
+// AEROSIZER NAMESPACE
+// ===========================================================================
+const AeroSizer = {
+    data: {},
+    _svgTimer: null,
+};
+
+// --- Tab switching ---
+AeroSizer.switchTab = function(tabId) {
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+    $('tab-' + tabId).classList.add('active');
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        if (btn.textContent.trim().toLowerCase().replace(/\s/g,'') === tabId.toLowerCase().replace(/\s/g,''))
+            btn.classList.add('active');
+    });
+    // Handle tab activation via onclick attribute matching
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    tabBtns.forEach(btn => {
+        const onclick = btn.getAttribute('onclick') || '';
+        if (onclick.includes("'" + tabId + "'")) btn.classList.add('active');
+    });
+
+    // Auto-load SVG when switching to aircraft tab
+    if (tabId === 'aircraft') AeroSizer.updateAircraftViews();
+};
+
+AeroSizer.switchSubTab = function(parentTab, subId) {
+    const parent = $('tab-' + parentTab);
+    if (!parent) return;
+    parent.querySelectorAll('.sub-content').forEach(el => el.classList.remove('active'));
+    parent.querySelectorAll('.sub-tab-btn').forEach(el => el.classList.remove('active'));
+    $(subId).classList.add('active');
+    parent.querySelectorAll('.sub-tab-btn').forEach(btn => {
+        const onclick = btn.getAttribute('onclick') || '';
+        if (onclick.includes("'" + subId + "'")) btn.classList.add('active');
+    });
+};
+
+// --- Presets ---
+AeroSizer.loadPreset = async function(name) {
+    if (!name) return;
+    setStatus('LOADING PRESET...', 'var(--amber)');
+    try {
+        const resp = await fetch('/api/presets/' + name);
+        const p = await resp.json();
+        if (p.error) { setStatus('PRESET ERROR', 'var(--red)'); return; }
+        AeroSizer.data.preset = p;
+
+        // Fill mission tab
+        if (p.aircraft_type) $('m-type').value = p.aircraft_type;
+        if (p.range_km) $('m-range').value = p.range_km;
+        if (p.passengers) $('m-pax').value = p.passengers;
+        if (p.cruise_mach) $('m-mach').value = p.cruise_mach;
+        if (p.cruise_alt_m) $('m-alt').value = p.cruise_alt_m;
+        if (p.loiter_hr) $('m-loiter').value = p.loiter_hr;
+        if (p.ld_cruise) $('m-ld-cruise').value = p.ld_cruise;
+        if (p.ld_loiter) $('m-ld-loiter').value = p.ld_loiter;
+        if (p.sfc_cruise) $('m-sfc-cruise').value = p.sfc_cruise;
+        if (p.sfc_loiter) $('m-sfc-loiter').value = p.sfc_loiter;
+        if (p.crew_weight_kg) $('m-crew-wt').value = p.crew_weight_kg;
+
+        // Fill constraint tab
+        if (p.CD0) { $('c-cd0').value = p.CD0; $('a-cd0').value = p.CD0; }
+        if (p.K) { $('c-k').value = p.K; $('a-k').value = p.K; }
+        if (p.CLmax_clean) $('c-clmax').value = p.CLmax_clean;
+        if (p.CLmax_takeoff) $('c-clto').value = p.CLmax_takeoff;
+        if (p.CLmax_landing) $('c-clland').value = p.CLmax_landing;
+        if (p.cruise_mach) $('c-mach').value = p.cruise_mach;
+        if (p.cruise_alt_m) $('c-alt').value = p.cruise_alt_m;
+        if (p.takeoff_distance_m) $('c-to-dist').value = p.takeoff_distance_m;
+        if (p.landing_distance_m) $('c-land-dist').value = p.landing_distance_m;
+        if (p.climb_gradient_oei) $('c-oei').value = p.climb_gradient_oei;
+        if (p.service_ceiling_m) $('c-ceil').value = p.service_ceiling_m;
+        if (p.n_engines) $('c-neng').value = p.n_engines;
+        if (p.thrust_lapse_cruise) $('c-lapse').value = p.thrust_lapse_cruise;
+
+        // Fill weights tab
+        if (p.AR) $('w-ar').value = p.AR;
+        if (p.Sref_m2) $('w-sref').value = p.Sref_m2;
+        if (p.sweep_quarter_deg) $('w-sweep').value = p.sweep_quarter_deg;
+        if (p.taper_ratio) $('w-taper').value = p.taper_ratio;
+        if (p.t_c_root) $('w-tc').value = p.t_c_root;
+        if (p.fuselage_length_m) $('w-flen').value = p.fuselage_length_m;
+        if (p.fuselage_width_m) $('w-fwid').value = p.fuselage_width_m;
+        if (p.fuselage_depth_m) $('w-fdep').value = p.fuselage_depth_m;
+        if (p.Sht_m2) $('w-sht').value = p.Sht_m2;
+        if (p.Svt_m2) $('w-svt').value = p.Svt_m2;
+        if (p.n_engines) $('w-neng').value = p.n_engines;
+        if (p.engine_weight_each_kg) $('w-engwt').value = p.engine_weight_each_kg;
+        if (p.thrust_each_N) $('w-thrust').value = p.thrust_each_N;
+        if (p.n_pax) $('w-npax').value = p.n_pax;
+
+        // Fill performance / cost
+        if (p.thrust_each_N && p.n_engines) {
+            const totalT = p.thrust_each_N * p.n_engines;
+            $('tl-t').value = totalT;
+            $('cl-t').value = totalT;
+            $('tu-t').value = totalT;
+            $('ps-t').value = totalT;
+        }
+        if (p.Sref_m2) { $('tl-s').value = p.Sref_m2; $('cl-s').value = p.Sref_m2; $('tu-s').value = p.Sref_m2; $('ps-s').value = p.Sref_m2; }
+        if (p.V_max_ms) $('co-vmax').value = p.V_max_ms;
+        if (p.Q_production) $('co-q').value = p.Q_production;
+
+        setStatus('PRESET LOADED: ' + (p.name || name).toUpperCase(), 'var(--green)');
+    } catch (e) {
+        setStatus('PRESET LOAD FAILED', 'var(--red)');
+    }
+};
+
+// --- Sizing ---
+AeroSizer.runSizing = async function() {
+    setStatus('SIZING...', 'var(--amber)');
+    $('btn-size').disabled = true;
+    try {
+        const body = {
+            aircraft_type: valStr('m-type'),
+            range_km: val('m-range'),
+            passengers: val('m-pax'),
+            cruise_mach: val('m-mach'),
+            cruise_alt_m: val('m-alt'),
+            loiter_hr: val('m-loiter'),
+            ld_cruise: val('m-ld-cruise'),
+            ld_loiter: val('m-ld-loiter'),
+            sfc_cruise: val('m-sfc-cruise'),
+            sfc_loiter: val('m-sfc-loiter'),
+            crew_weight_kg: val('m-crew-wt'),
+            payload_extra_kg: val('m-extra-payload') || 0,
+        };
+        const resp = await fetch('/api/size', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+        const data = await resp.json();
+        if (data.error) { setStatus('SIZING FAILED: ' + data.error.substring(0,50), 'var(--red)'); return; }
+        AeroSizer.data.sizing = data;
+
+        // Display results
+        $('sizing-results').style.display = 'block';
+        $('sizing-placeholder').style.display = 'none';
+
+        $('r-w0').textContent = fmt(data.W0_kg, 0);
+        $('r-w0-lb').textContent = fmt(kgToLb(data.W0_kg), 0) + ' LB';
+        $('r-we').textContent = fmt(data.We_kg, 0);
+        $('r-we-lb').textContent = fmt(kgToLb(data.We_kg), 0) + ' LB';
+        $('r-wf').textContent = fmt(data.Wf_kg, 0);
+        $('r-wf-lb').textContent = fmt(kgToLb(data.Wf_kg), 0) + ' LB';
+
+        const we_pct = (data.We_fraction * 100);
+        const wf_pct = (data.Wf_fraction * 100);
+        const wp_pct = (data.W_payload_kg / data.W0_kg * 100);
+        $('frac-we-val').textContent = we_pct.toFixed(1) + '%';
+        $('frac-we-bar').style.width = we_pct + '%';
+        $('frac-wf-val').textContent = wf_pct.toFixed(1) + '%';
+        $('frac-wf-bar').style.width = wf_pct + '%';
+        $('frac-wp-val').textContent = wp_pct.toFixed(1) + '%';
+        $('frac-wp-bar').style.width = wp_pct + '%';
+
+        // Convergence chart
+        const convX = data.convergence_history.map((_, i) => i + 1);
+        Plotly.newPlot('chart-convergence', [{
+            x: convX, y: data.convergence_history, mode: 'lines+markers',
+            line: {color: '#89b4fa', width: 2}, marker: {size: 4, color: '#89b4fa'},
+            name: 'W0'
+        }], pfdLayout({title: {text: 'W0 CONVERGENCE', font: {size: 12}},
+            xaxis: {title: 'ITERATION', gridcolor: '#313244'},
+            yaxis: {title: 'W0 (KG)', gridcolor: '#313244'}}), PFD_CONFIG);
+
+        // Segment fractions chart
+        const segLabels = Object.keys(data.segment_fractions);
+        const segValues = Object.values(data.segment_fractions);
+        Plotly.newPlot('chart-segments', [{
+            x: segLabels, y: segValues, type: 'bar',
+            marker: {color: segValues.map(v => v < 0.98 ? '#fab387' : '#89b4fa'), line: {color: '#89b4fa', width: 1}},
+        }], pfdLayout({title: {text: 'Wi/Wi-1', font: {size: 12}},
+            xaxis: {title: '', tickangle: -30}, yaxis: {title: 'FRACTION', range: [Math.min(...segValues) * 0.99, 1.001]},
+            margin: {b: 80}}), PFD_CONFIG);
+
+        // Parameters
+        $('sizing-params').innerHTML = [
+            {l:'L/D CRUISE', v:data.ld_cruise.toFixed(1)}, {l:'L/D LOITER', v:data.ld_loiter.toFixed(1)},
+            {l:'SFC CRUISE', v:data.sfc_cruise.toFixed(3)}, {l:'SFC LOITER', v:data.sfc_loiter.toFixed(3)},
+            {l:'ITERATIONS', v:data.iterations}, {l:'PAYLOAD', v:fmt(data.W_payload_kg,0)+' KG'},
+        ].map(m => `<div class="metric-card"><div class="metric-label">${m.l}</div><div class="metric-value" style="font-size:1rem;">${m.v}</div></div>`).join('');
+
+        // Update status bar
+        updateStatusBar(data);
+
+        // Auto-fill downstream tabs
+        $('w-w0').value = Math.round(data.W0_kg);
+        $('w-wf').value = Math.round(data.Wf_kg);
+        $('tl-w').value = Math.round(data.W0_kg);
+        $('cl-w').value = Math.round(data.W0_kg);
+        $('tu-w').value = Math.round(data.W0_kg);
+        $('ps-w').value = Math.round(data.W0_kg);
+        $('co-we').value = Math.round(data.We_kg);
+        $('oc-w0').value = Math.round(data.W0_kg);
+        $('oc-we').value = Math.round(data.We_kg);
+        $('oc-wf').value = Math.round(data.Wf_kg);
+        $('rp-w0').value = Math.round(data.W0_kg);
+        $('rp-we').value = Math.round(data.We_kg);
+        $('rp-wf').value = Math.round(data.Wf_kg);
+
+        setStatus('SIZING COMPLETE -- W0 = ' + fmt(data.W0_kg,0) + ' KG', 'var(--green)');
+    } catch (e) {
+        setStatus('SIZING ERROR: ' + e.message, 'var(--red)');
+    } finally {
+        $('btn-size').disabled = false;
+    }
+};
+
+// --- Constraints ---
+AeroSizer.runConstraints = async function() {
+    setStatus('COMPUTING CONSTRAINTS...', 'var(--amber)');
+    try {
+        const body = {
+            CD0: val('c-cd0'), K: val('c-k'),
+            CLmax_clean: val('c-clmax'), CLmax_takeoff: val('c-clto'), CLmax_landing: val('c-clland'),
+            cruise_mach: val('c-mach'), cruise_alt_m: val('c-alt'),
+            takeoff_distance_m: val('c-to-dist'), landing_distance_m: val('c-land-dist'),
+            climb_gradient_oei: val('c-oei'), service_ceiling_m: val('c-ceil'),
+            n_engines: val('c-neng'), thrust_lapse_cruise: val('c-lapse'),
+        };
+        const resp = await fetch('/api/constraints', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+        const data = await resp.json();
+        if (data.error) { setStatus('CONSTRAINT ERROR', 'var(--red)'); return; }
+        AeroSizer.data.constraints = data;
+
+        const traces = [];
+        const colors = {Cruise: '#89b4fa', 'Takeoff (BFL)': '#fab387', 'OEI Climb (FAR 25)': '#89dceb', 'Service Ceiling': '#f38ba8', 'Landing (max W/S)': '#cba6f7'};
+        for (const t of data.traces) {
+            if (t.type === 'line') {
+                // Convert Pa to kg/m2
+                traces.push({x: t.ws.map(w => w / 9.81), y: t.tw, mode: 'lines', name: t.name,
+                    line: {color: colors[t.name] || '#89b4fa', width: 2}});
+            } else if (t.type === 'vline') {
+                const wsKg = t.ws / 9.81;
+                traces.push({x: [wsKg, wsKg], y: [0, 0.6], mode: 'lines', name: t.name,
+                    line: {color: colors[t.name] || '#cba6f7', width: 2, dash: 'dash'}});
+            }
+        }
+        // Design point
+        const dp = data.design_point;
+        traces.push({x: [dp.ws / 9.81], y: [dp.tw], mode: 'markers', name: 'DESIGN POINT',
+            marker: {size: 14, color: '#89b4fa', symbol: 'diamond', line: {color: '#fff', width: 1}}});
+
+        Plotly.newPlot('chart-constraints', traces, pfdLayout({
+            title: {text: 'T/W VS W/S CONSTRAINT DIAGRAM', font: {size: 13}},
+            xaxis: {title: 'W/S (KG/M2)', gridcolor: '#313244'},
+            yaxis: {title: 'T/W', gridcolor: '#313244', range: [0, 0.55]},
+        }), PFD_CONFIG);
+
+        $('constraint-metrics').innerHTML = [
+            {l:'DESIGN W/S', v:(dp.ws / 9.81).toFixed(0) + ' KG/M2'},
+            {l:'DESIGN T/W', v:dp.tw.toFixed(4)},
+            {l:'LANDING W/S MAX', v:(data.landing_ws_max / 9.81).toFixed(0) + ' KG/M2'},
+        ].map(m => `<div class="metric-card highlight"><div class="metric-label">${m.l}</div><div class="metric-value" style="font-size:1.1rem;">${m.v}</div></div>`).join('');
+
+        setStatus('CONSTRAINTS COMPLETE', 'var(--green)');
+    } catch (e) {
+        setStatus('CONSTRAINT ERROR: ' + e.message, 'var(--red)');
+    }
+};
+
+// --- Aerodynamics ---
+AeroSizer.runAero = async function() {
+    setStatus('COMPUTING DRAG POLAR...', 'var(--amber)');
+    try {
+        const body = {CD0: val('a-cd0'), K: val('a-k'), CD0_takeoff_increment: val('a-dcd0to'), CD0_landing_increment: val('a-dcd0land')};
+        const resp = await fetch('/api/drag_polar', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+        const data = await resp.json();
+        if (data.error) { setStatus('AERO ERROR', 'var(--red)'); return; }
+        AeroSizer.data.aero = data;
+
+        Plotly.newPlot('chart-polar', [
+            {x: data.CD_clean, y: data.CL, mode: 'lines', name: 'CLEAN', line: {color: '#89b4fa', width: 2}},
+            {x: data.CD_takeoff, y: data.CL, mode: 'lines', name: 'TAKEOFF', line: {color: '#fab387', width: 1.5, dash: 'dash'}},
+            {x: data.CD_landing, y: data.CL, mode: 'lines', name: 'LANDING', line: {color: '#f38ba8', width: 1.5, dash: 'dot'}},
+        ], pfdLayout({xaxis: {title: 'CD'}, yaxis: {title: 'CL'}}), PFD_CONFIG);
+
+        Plotly.newPlot('chart-ld', [{
+            x: data.CL, y: data.LD_clean, mode: 'lines', name: 'L/D', line: {color: '#89b4fa', width: 2},
+        }], pfdLayout({xaxis: {title: 'CL'}, yaxis: {title: 'L/D'}}), PFD_CONFIG);
+
+        $('aero-metrics-card').style.display = 'block';
+        $('aero-metrics').innerHTML = [
+            {l:'(L/D) MAX', v:data.max_ld.toFixed(1)},
+            {l:'CL @ MAX L/D', v:data.cl_max_ld.toFixed(3)},
+            {l:'CL MIN POWER', v:data.cl_min_power.toFixed(3)},
+            {l:'CD0', v:val('a-cd0').toFixed(4)},
+            {l:'K', v:val('a-k').toFixed(4)},
+        ].map(m => `<div class="metric-card"><div class="metric-label">${m.l}</div><div class="metric-value" style="font-size:1.1rem;">${m.v}</div></div>`).join('');
+
+        setStatus('AERO COMPLETE -- L/D MAX = ' + data.max_ld.toFixed(1), 'var(--green)');
+    } catch (e) {
+        setStatus('AERO ERROR: ' + e.message, 'var(--red)');
+    }
+};
+
+// --- Weights ---
+AeroSizer.runWeights = async function() {
+    setStatus('COMPUTING WEIGHTS...', 'var(--amber)');
+    try {
+        const body = {
+            W0_kg: val('w-w0'), Wf_kg: val('w-wf'), AR: val('w-ar'), Sref_m2: val('w-sref'),
+            sweep_quarter_deg: val('w-sweep'), taper_ratio: val('w-taper'), t_c_root: val('w-tc'),
+            fuselage_length_m: val('w-flen'), fuselage_width_m: val('w-fwid'), fuselage_depth_m: val('w-fdep'),
+            Sht_m2: val('w-sht'), Svt_m2: val('w-svt'),
+            n_engines: val('w-neng'), engine_weight_each_kg: val('w-engwt'), thrust_each_N: val('w-thrust'),
+            n_pax: val('w-npax'),
+        };
+        const resp = await fetch('/api/weights', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+        const data = await resp.json();
+        if (data.error) { setStatus('WEIGHTS ERROR', 'var(--red)'); return; }
+        AeroSizer.data.weights = data;
+
+        const ws = data.weight_statement;
+        const exclude = ['TOTAL_EMPTY', 'TOTAL_STRUCTURES', 'TOTAL_PROPULSION', 'TOTAL_EQUIPMENT'];
+        const labels = [], vals = [], colors = [];
+        const colorMap = {WING:'#89b4fa', FUSELAGE:'#89dceb', HT:'#fab387', VT:'#f38ba8', MAIN_GEAR:'#cba6f7',
+            NOSE_GEAR:'#00ffaa', ENGINES_INSTALLED:'#fab387', NACELLES:'#89dceb'};
+        for (const [k,v] of Object.entries(ws)) {
+            if (exclude.includes(k)) continue;
+            labels.push(k.replace(/_/g,' '));
+            vals.push(v.kg);
+            colors.push(colorMap[k] || '#89b4fa');
+        }
+
+        Plotly.newPlot('chart-weights', [{
+            y: labels, x: vals, type: 'bar', orientation: 'h',
+            marker: {color: colors, line: {color: '#89b4fa', width: 0.5}},
+            text: vals.map(v => fmt(v,0) + ' KG'), textposition: 'outside', textfont: {color: '#a6e3a1', size: 9},
+        }], pfdLayout({margin: {l: 140, r: 60}, yaxis: {autorange: 'reversed'}, xaxis: {title: 'WEIGHT (KG)'}}), PFD_CONFIG);
+
+        // Table
+        $('weights-table-card').style.display = 'block';
+        let tableHtml = '<table class="data-table"><tr><th>COMPONENT</th><th>KG</th><th>LB</th><th>% W0</th></tr>';
+        for (const [k,v] of Object.entries(ws)) {
+            const isTot = k.startsWith('TOTAL');
+            const style = isTot ? ' style="font-weight:bold;border-top:1px solid var(--green);"' : '';
+            tableHtml += `<tr${style}><td>${k.replace(/_/g,' ')}</td><td class="num">${fmt(v.kg,0)}</td><td class="num">${fmt(v.lb,0)}</td><td class="num">${v.pct.toFixed(1)}%</td></tr>`;
+        }
+        tableHtml += '</table>';
+        $('weights-table').innerHTML = tableHtml;
+
+        setStatus('WEIGHTS COMPLETE -- WE = ' + fmt(data.We_total_kg, 0) + ' KG', 'var(--green)');
+    } catch (e) {
+        setStatus('WEIGHTS ERROR: ' + e.message, 'var(--red)');
+    }
+};
+
+// --- Performance: Takeoff/Landing ---
+AeroSizer.runTakeoffLanding = async function() {
+    setStatus('COMPUTING TO/LAND...', 'var(--amber)');
+    try {
+        const body = {
+            W_kg: val('tl-w'), S_m2: val('tl-s'), T_N: val('tl-t'),
+            CD0: val('tl-cd0'), K: val('tl-k'),
+            CLmax_takeoff: val('tl-clto'), CLmax_landing: val('tl-clland'),
+        };
+        const resp = await fetch('/api/performance/takeoff_landing', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+        const data = await resp.json();
+        if (data.error) { setStatus('TO/LAND ERROR', 'var(--red)'); return; }
+        AeroSizer.data.takeoff_landing = data;
+
+        const to = data.takeoff;
+        const la = data.landing;
+        $('tl-results').innerHTML = `
+            <div class="metrics-row">
+                <div class="metric-card highlight"><div class="metric-label">TO TOTAL</div><div class="metric-value">${fmt(to.total_m,0)}</div><div class="metric-sub">${fmt(to.total_ft,0)} FT</div></div>
+                <div class="metric-card"><div class="metric-label">GROUND ROLL</div><div class="metric-value" style="font-size:1rem;">${fmt(to.ground_roll_m,0)} M</div></div>
+                <div class="metric-card"><div class="metric-label">V STALL</div><div class="metric-value" style="font-size:1rem;">${to.V_stall_kt.toFixed(0)} KT</div></div>
+                <div class="metric-card"><div class="metric-label">V LOF</div><div class="metric-value" style="font-size:1rem;">${to.V_LOF_ms.toFixed(0)} M/S</div></div>
+            </div>
+            <div class="metrics-row">
+                <div class="metric-card amber"><div class="metric-label">BFL</div><div class="metric-value">${fmt(data.BFL_m,0)} M</div><div class="metric-sub">${fmt(data.BFL_ft,0)} FT</div></div>
+            </div>
+            <div class="metrics-row">
+                <div class="metric-card highlight"><div class="metric-label">LAND TOTAL</div><div class="metric-value">${fmt(la.total_m,0)}</div><div class="metric-sub">${fmt(la.total_ft,0)} FT</div></div>
+                <div class="metric-card"><div class="metric-label">V APPROACH</div><div class="metric-value" style="font-size:1rem;">${la.V_approach_kt.toFixed(0)} KT</div></div>
+                <div class="metric-card"><div class="metric-label">BRAKING</div><div class="metric-value" style="font-size:1rem;">${fmt(la.braking_m,0)} M</div></div>
+            </div>`;
+        setStatus('TO/LAND COMPLETE', 'var(--green)');
+    } catch (e) {
+        setStatus('TO/LAND ERROR: ' + e.message, 'var(--red)');
+    }
+};
+
+// --- Performance: Climb ---
+AeroSizer.runClimb = async function() {
+    setStatus('COMPUTING CLIMB...', 'var(--amber)');
+    try {
+        const body = {W_kg: val('cl-w'), S_m2: val('cl-s'), T_N: val('cl-t'), CD0: val('cl-cd0'), K: val('cl-k')};
+        const resp = await fetch('/api/performance/climb_profile', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+        const data = await resp.json();
+        if (data.error) { setStatus('CLIMB ERROR', 'var(--red)'); return; }
+
+        Plotly.newPlot('chart-climb', [{
+            x: data.ROC_max, y: data.altitude.map(a => a / 1000), mode: 'lines',
+            line: {color: '#89b4fa', width: 2}, name: 'ROC MAX',
+        }], pfdLayout({xaxis: {title: 'ROC (M/S)'}, yaxis: {title: 'ALTITUDE (KM)'}}), PFD_CONFIG);
+
+        $('climb-metrics').innerHTML = [
+            {l:'SVC CEILING', v:(data.service_ceiling_m ? (data.service_ceiling_m/1000).toFixed(1)+' KM' : 'N/A')},
+            {l:'ABS CEILING', v:(data.absolute_ceiling_m ? (data.absolute_ceiling_m/1000).toFixed(1)+' KM' : 'N/A')},
+        ].map(m => `<div class="metric-card"><div class="metric-label">${m.l}</div><div class="metric-value" style="font-size:1.1rem;">${m.v}</div></div>`).join('');
+
+        setStatus('CLIMB COMPLETE', 'var(--green)');
+    } catch (e) {
+        setStatus('CLIMB ERROR: ' + e.message, 'var(--red)');
+    }
+};
+
+// --- Performance: Range-Payload ---
+AeroSizer.runRange = async function() {
+    setStatus('COMPUTING RANGE...', 'var(--amber)');
+    try {
+        const body = {
+            W0_kg: val('rp-w0'), We_kg: val('rp-we'), Wf_max_kg: val('rp-wf'),
+            sfc_per_hr: val('rp-sfc'), V_cruise_ms: val('rp-v'),
+            CD0: val('rp-cd0'), K: val('rp-k'),
+        };
+        const resp = await fetch('/api/performance/range_payload', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+        const data = await resp.json();
+        if (data.error) { setStatus('RANGE ERROR', 'var(--red)'); return; }
+
+        Plotly.newPlot('chart-range', [{
+            x: data.curves.range_km, y: data.curves.payload_kg, mode: 'lines',
+            line: {color: '#89b4fa', width: 2}, name: 'RANGE-PAYLOAD',
+        }], pfdLayout({xaxis: {title: 'RANGE (KM)'}, yaxis: {title: 'PAYLOAD (KG)'}}), PFD_CONFIG);
+
+        setStatus('RANGE COMPLETE', 'var(--green)');
+    } catch (e) {
+        setStatus('RANGE ERROR: ' + e.message, 'var(--red)');
+    }
+};
+
+// --- Performance: Turn ---
+AeroSizer.runTurn = async function() {
+    setStatus('COMPUTING TURN...', 'var(--amber)');
+    try {
+        const body = {
+            W_kg: val('tu-w'), S_m2: val('tu-s'), T_N: val('tu-t'),
+            CD0: val('tu-cd0'), K: val('tu-k'), CLmax: val('tu-clmax'), n_limit: val('tu-nlim'),
+        };
+        const resp = await fetch('/api/turn_performance', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+        const data = await resp.json();
+        if (data.error) { setStatus('TURN ERROR', 'var(--red)'); return; }
+
+        Plotly.newPlot('chart-turn', [
+            {x: data.sustained.V, y: data.sustained.turn_rate_degs, mode: 'lines', name: 'SUSTAINED', line: {color: '#89b4fa', width: 2}},
+            {x: data.instantaneous.V, y: data.instantaneous.turn_rate_degs, mode: 'lines', name: 'INSTANTANEOUS', line: {color: '#fab387', width: 2, dash: 'dash'}},
+        ], pfdLayout({xaxis: {title: 'VELOCITY (M/S)'}, yaxis: {title: 'TURN RATE (DEG/S)'}}), PFD_CONFIG);
+
+        $('turn-metrics').innerHTML = [
+            {l:'CORNER SPEED', v:data.corner_speed_kt.toFixed(0)+' KT'},
+            {l:'MAX SUST RATE', v:data.max_sustained_rate_degs.toFixed(1)+' DEG/S'},
+        ].map(m => `<div class="metric-card"><div class="metric-label">${m.l}</div><div class="metric-value" style="font-size:1.1rem;">${m.v}</div></div>`).join('');
+
+        setStatus('TURN COMPLETE', 'var(--green)');
+    } catch (e) {
+        setStatus('TURN ERROR: ' + e.message, 'var(--red)');
+    }
+};
+
+// --- Performance: Ps Diagram ---
+AeroSizer.runPs = async function() {
+    setStatus('COMPUTING PS...', 'var(--amber)');
+    try {
+        const body = {W_kg: val('ps-w'), S_m2: val('ps-s'), T_N: val('ps-t'), CD0: val('ps-cd0'), K: val('ps-k')};
+        const resp = await fetch('/api/ps_diagram', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+        const data = await resp.json();
+        if (data.error) { setStatus('PS ERROR', 'var(--red)'); return; }
+
+        const traces = [];
+        const psColors = ['#89b4fa', '#fab387', '#f38ba8'];
+        let i = 0;
+        for (const [n, ps] of Object.entries(data.ps)) {
+            traces.push({x: data.mach, y: ps, mode: 'lines', name: 'n=' + n, line: {color: psColors[i % psColors.length], width: 2}});
+            i++;
+        }
+        Plotly.newPlot('chart-ps', traces, pfdLayout({xaxis: {title: 'MACH'}, yaxis: {title: 'PS (M/S)'}}), PFD_CONFIG);
+
+        setStatus('PS COMPLETE', 'var(--green)');
+    } catch (e) {
+        setStatus('PS ERROR: ' + e.message, 'var(--red)');
+    }
+};
+
+// --- Cost: DAPCA ---
+AeroSizer.runCostDAPCA = async function() {
+    setStatus('COMPUTING DAPCA...', 'var(--amber)');
+    try {
+        const body = {
+            We_kg: val('co-we'), V_max_ms: val('co-vmax'), Q: val('co-q'), FTA: val('co-fta'),
+            N_engines: val('co-neng'), T_max_N: val('co-tmax'), CPI_factor: val('co-cpi'), n_pax: val('co-npax'),
+        };
+        const resp = await fetch('/api/cost/dapca', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+        const data = await resp.json();
+        if (data.error) { setStatus('DAPCA ERROR', 'var(--red)'); return; }
+        AeroSizer.data.dapca = data;
+
+        const $ = (s) => '$' + Number(s).toLocaleString('en-US');
+        const costEl = document.getElementById('cost-results');
+        costEl.innerHTML = `
+            <div class="metrics-row">
+                <div class="metric-card highlight"><div class="metric-label">UNIT FLYAWAY</div><div class="metric-value" style="font-size:1.1rem;">${$(data.per_unit.flyaway)}</div></div>
+                <div class="metric-card highlight"><div class="metric-label">UNIT TOTAL</div><div class="metric-value" style="font-size:1.1rem;">${$(data.per_unit.total)}</div></div>
+                <div class="metric-card amber"><div class="metric-label">PROGRAM TOTAL</div><div class="metric-value" style="font-size:1rem;">${$(data.totals.program)}</div></div>
+                <div class="metric-card"><div class="metric-label">RDTE</div><div class="metric-value" style="font-size:1rem;">${$(data.totals.RDTE)}</div></div>
+            </div>
+            <div class="card"><div class="card-title">COST BREAKDOWN (DAPCA IV)</div><div id="chart-cost-bar" style="height:300px;"></div></div>
+            <div class="card"><div class="card-title">LABOR HOURS</div>
+                <table class="data-table"><tr><th>CATEGORY</th><th>HOURS</th></tr>
+                ${Object.entries(data.hours).map(([k,v]) => `<tr><td>${k.toUpperCase().replace(/_/g,' ')}</td><td class="num">${fmt(v,0)}</td></tr>`).join('')}
+                </table></div>`;
+
+        const costLabels = Object.keys(data.costs).map(s => s.toUpperCase().replace(/_/g,' '));
+        const costValues = Object.values(data.costs);
+        Plotly.newPlot('chart-cost-bar', [{
+            y: costLabels, x: costValues, type: 'bar', orientation: 'h',
+            marker: {color: '#89b4fa', line: {color: '#a6e3a1', width: 0.5}},
+            text: costValues.map(v => '$' + fmt(v, 0)), textposition: 'outside', textfont: {color: '#a6e3a1', size: 9},
+        }], pfdLayout({margin: {l: 150, r: 70}, yaxis: {autorange: 'reversed'}, xaxis: {title: 'COST ($)'}}), PFD_CONFIG);
+
+        setStatus('DAPCA COMPLETE', 'var(--green)');
+    } catch (e) {
+        setStatus('DAPCA ERROR: ' + e.message, 'var(--red)');
+    }
+};
+
+// --- Cost: Operating ---
+AeroSizer.runCostOperating = async function() {
+    setStatus('COMPUTING DOC...', 'var(--amber)');
+    try {
+        const body = {
+            W0_kg: val('oc-w0'), We_kg: val('oc-we'), Wf_mission_kg: val('oc-wf'),
+            V_cruise_ms: val('oc-v'), range_km: val('oc-range'),
+            fuel_price_per_kg: val('oc-fuel'), aircraft_cost: val('oc-acost'),
+        };
+        const resp = await fetch('/api/cost/operating', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+        const data = await resp.json();
+        if (data.error) { setStatus('DOC ERROR', 'var(--red)'); return; }
+        AeroSizer.data.operating = data;
+
+        const costEl = document.getElementById('cost-results');
+        const prevHTML = costEl.innerHTML;
+        const fc = (v) => '$' + fmt(v, 0);
+
+        costEl.innerHTML = prevHTML + `
+            <div class="card"><div class="card-title">DIRECT OPERATING COST PER BLOCK HOUR</div>
+            <div class="metrics-row">
+                ${Object.entries(data.per_block_hour).map(([k,v]) =>
+                    `<div class="metric-card${k==='total_DOC'?' highlight':''}"><div class="metric-label">${k.toUpperCase().replace(/_/g,' ')}</div><div class="metric-value" style="font-size:1rem;">${fc(v)}</div></div>`
+                ).join('')}
+            </div></div>
+            <div class="card"><div class="card-title">ECONOMICS</div>
+            <div class="metrics-row">
+                <div class="metric-card highlight"><div class="metric-label">CASM</div><div class="metric-value" style="font-size:1.1rem;">${data.economics.CASM_cents.toFixed(1)}<span class="readout-unit">CENTS</span></div></div>
+                <div class="metric-card"><div class="metric-label">FUEL/SEAT/KM</div><div class="metric-value" style="font-size:1rem;">${data.economics.fuel_per_seat_km_kg.toFixed(3)} KG</div></div>
+                <div class="metric-card"><div class="metric-label">CO2/SEAT/KM</div><div class="metric-value" style="font-size:1rem;">${data.economics.CO2_per_seat_km_kg.toFixed(3)} KG</div></div>
+            </div></div>`;
+
+        setStatus('DOC COMPLETE', 'var(--green)');
+    } catch (e) {
+        setStatus('DOC ERROR: ' + e.message, 'var(--red)');
+    }
+};
+
+// --- Aircraft SVG Visualization ---
+AeroSizer.getGeometryInputs = function() {
+    return {
+        span_m: val('g-span'), root_chord_m: val('g-rootc'), tip_chord_m: val('g-tipc'),
+        sweep_quarter_deg: val('g-sweep'), fuselage_length_m: val('g-fuselen'),
+        fuselage_width_m: val('g-fusew'), tail_span_m: val('g-htspan'),
+        tail_root_chord_m: val('g-htroot'), tail_tip_chord_m: val('g-httip'),
+        tail_sweep_deg: val('g-htsweep'), vtail_height_m: val('g-vth'),
+        vtail_root_chord_m: val('g-vtroot'), vtail_tip_chord_m: val('g-vttip'),
+        vtail_sweep_deg: val('g-vtsweep'), engine_diameter_m: val('g-engdia'),
+        engine_length_m: val('g-englen'), n_engines: val('g-neng'),
+        wing_position_fraction: val('g-wingpos'),
+    };
+};
+
+AeroSizer.updateAircraftViews = async function() {
+    try {
+        const geom = AeroSizer.getGeometryInputs();
+        const resp = await fetch('/api/geometry/aircraft_svg', {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(geom)
+        });
+        const data = await resp.json();
+        if (data.error) return;
+        document.getElementById('top-view').innerHTML = data.top_view_svg;
+        document.getElementById('side-view').innerHTML = data.side_view_svg;
+        document.getElementById('front-view').innerHTML = data.front_view_svg;
+
+        // Update mini header silhouette (use top view, scaled down)
+        const mini = data.top_view_svg.replace('width="400"', 'width="60"').replace('height="300"', 'height="30"');
+        document.getElementById('header-mini-aircraft').innerHTML = mini;
+
+        // Update geometry summary
+        AeroSizer.updateGeomSummary(geom);
+    } catch (e) {
+        // silent fail for SVG updates
+    }
+};
+
+AeroSizer.updateGeomSummary = function(g) {
+    if (!g) return;
+    const S = g.span_m && g.root_chord_m && g.tip_chord_m ? g.span_m / 2 * (g.root_chord_m + g.tip_chord_m) : 0;
+    const AR = g.span_m && S > 0 ? (g.span_m * g.span_m / S) : 0;
+    const taper = g.root_chord_m > 0 ? g.tip_chord_m / g.root_chord_m : 0;
+    const MAC = g.root_chord_m > 0 ? (2/3) * g.root_chord_m * (1 + taper + taper*taper) / (1 + taper) : 0;
+    document.getElementById('geom-summary-card').style.display = 'block';
+    document.getElementById('geom-summary-table').innerHTML = `
+        <table class="data-table">
+        <tr><th>PARAMETER</th><th>VALUE</th></tr>
+        <tr><td>WING AREA (S)</td><td class="num">${S.toFixed(1)} M2</td></tr>
+        <tr><td>ASPECT RATIO</td><td class="num">${AR.toFixed(2)}</td></tr>
+        <tr><td>TAPER RATIO</td><td class="num">${taper.toFixed(3)}</td></tr>
+        <tr><td>MAC</td><td class="num">${MAC.toFixed(2)} M</td></tr>
+        <tr><td>SPAN</td><td class="num">${g.span_m ? g.span_m.toFixed(1) : '--'} M</td></tr>
+        <tr><td>FUSELAGE L/W</td><td class="num">${g.fuselage_length_m ? g.fuselage_length_m.toFixed(1) : '--'} / ${g.fuselage_width_m ? g.fuselage_width_m.toFixed(1) : '--'} M</td></tr>
+        </table>`;
+};
+
+AeroSizer.debouncedUpdateSVG = function() {
+    clearTimeout(AeroSizer._svgTimer);
+    AeroSizer._svgTimer = setTimeout(() => AeroSizer.updateAircraftViews(), 300);
+};
+
+AeroSizer.computeGeometryFromSizing = async function() {
+    setStatus('COMPUTING GEOMETRY FROM SIZING...', 'var(--amber)');
+    try {
+        const sizing = AeroSizer.data.sizing;
+        const preset = AeroSizer.data.preset || {};
+        const body = {
+            W0_kg: sizing ? sizing.W0_kg : val('w-w0') || 79016,
+            S_m2: preset.Sref_m2 || val('w-sref') || 124.6,
+            AR: preset.AR || val('w-ar') || 9.45,
+            taper_ratio: preset.taper_ratio || val('w-taper') || 0.278,
+            sweep_quarter_deg: preset.sweep_quarter_deg || val('w-sweep') || 25.0,
+            fuselage_length_m: preset.fuselage_length_m || val('w-flen') || 38.0,
+            fuselage_width_m: preset.fuselage_width_m || val('w-fwid') || 3.76,
+            n_engines: preset.n_engines || val('w-neng') || 2,
+        };
+        const resp = await fetch('/api/geometry/from_sizing', {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(body)
+        });
+        const data = await resp.json();
+        if (data.error) { setStatus('GEOMETRY ERROR', 'var(--red)'); return; }
+
+        // Fill geometry inputs
+        $('g-span').value = data.span_m;
+        $('g-rootc').value = data.root_chord_m;
+        $('g-tipc').value = data.tip_chord_m;
+        $('g-sweep').value = data.sweep_quarter_deg;
+        $('g-fuselen').value = data.fuselage_length_m;
+        $('g-fusew').value = data.fuselage_width_m;
+        $('g-htspan').value = data.tail_span_m;
+        $('g-htroot').value = data.tail_root_chord_m;
+        $('g-httip').value = data.tail_tip_chord_m;
+        $('g-htsweep').value = data.tail_sweep_deg;
+        $('g-vth').value = data.vtail_height_m;
+        $('g-vtroot').value = data.vtail_root_chord_m;
+        $('g-vttip').value = data.vtail_tip_chord_m;
+        $('g-vtsweep').value = data.vtail_sweep_deg;
+        $('g-engdia').value = data.engine_diameter_m;
+        $('g-englen').value = data.engine_length_m;
+        $('g-neng').value = data.n_engines;
+        $('g-wingpos').value = data.wing_position_fraction;
+
+        AeroSizer.updateAircraftViews();
+        setStatus('GEOMETRY COMPUTED FROM SIZING', 'var(--green)');
+    } catch (e) {
+        setStatus('GEOMETRY ERROR: ' + e.message, 'var(--red)');
+    }
+};
+
+// --- Optimization: Carpet Plot ---
+AeroSizer.generateCarpetPlot = async function() {
+    setStatus('GENERATING CARPET PLOT...', 'var(--amber)');
+    $('btn-carpet').disabled = true;
+
+    try {
+        const baseBody = {
+            aircraft_type: valStr('cp-type'),
+            range_km: val('cp-range'),
+            passengers: val('cp-pax'),
+            cruise_mach: val('cp-mach'),
+            cruise_alt_m: val('cp-alt'),
+            loiter_hr: 0.5,
+        };
+        const ldMin = val('cp-ld-min'), ldMax = val('cp-ld-max');
+        const sfcMin = val('cp-sfc-min'), sfcMax = val('cp-sfc-max');
+        const nLd = 6, nSfc = 5;
+        const ldValues = [];
+        const sfcValues = [];
+        for (let i = 0; i < nLd; i++) ldValues.push(ldMin + i * (ldMax - ldMin) / (nLd - 1));
+        for (let i = 0; i < nSfc; i++) sfcValues.push(sfcMin + i * (sfcMax - sfcMin) / (nSfc - 1));
+
+        // Collect W0 for each (L/D, SFC) combination
+        const promises = [];
+        const grid = [];
+        for (const ld of ldValues) {
+            for (const sfc of sfcValues) {
+                const body = {...baseBody, ld_cruise: ld, ld_loiter: ld + 1, sfc_cruise: sfc, sfc_loiter: sfc - 0.1};
+                promises.push(fetch('/api/size', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)})
+                    .then(r => r.json())
+                    .then(d => ({ld, sfc, W0: d.W0_kg || null, error: d.error})));
+            }
+        }
+        const results = await Promise.all(promises);
+
+        // Build contour data
+        const z = [];
+        let idx = 0;
+        for (const ld of ldValues) {
+            const row = [];
+            for (const sfc of sfcValues) {
+                const r = results[idx++];
+                row.push(r.W0 || null);
+            }
+            z.push(row);
+        }
+
+        Plotly.newPlot('chart-carpet', [{
+            x: sfcValues, y: ldValues, z: z,
+            type: 'contour',
+            colorscale: [[0, '#11111b'], [0.25, '#1e1e2e'], [0.5, '#313244'], [0.75, '#585b70'], [1, '#89b4fa']],
+            contours: {showlabels: true, labelfont: {size: 10, color: '#89b4fa'}},
+            line: {color: '#89b4fa'},
+            colorbar: {title: 'W0 (KG)', titlefont: {color: '#89b4fa'}, tickfont: {color: '#a6e3a1'}, bordercolor: '#313244'},
+        }], pfdLayout({
+            title: {text: 'W0 SIZING CARPET PLOT', font: {size: 13}},
+            xaxis: {title: 'SFC (1/HR)'},
+            yaxis: {title: 'L/D CRUISE'},
+        }), PFD_CONFIG);
+
+        setStatus('CARPET PLOT COMPLETE', 'var(--green)');
+    } catch (e) {
+        setStatus('CARPET PLOT ERROR: ' + e.message, 'var(--red)');
+    } finally {
+        $('btn-carpet').disabled = false;
+    }
+};
+
+// --- Optimization: Trade Study ---
+AeroSizer.runTradeStudy = async function() {
+    setStatus('RUNNING TRADE STUDY...', 'var(--amber)');
+    $('btn-trade').disabled = true;
+
+    try {
+        const param = valStr('ts-param');
+        const baseline = val('ts-baseline');
+        const sweepMin = val('ts-min');
+        const sweepMax = val('ts-max');
+        const nPts = val('ts-n') || 15;
+
+        // Build base request from current mission inputs
+        const baseBody = {
+            aircraft_type: valStr('m-type'),
+            range_km: val('m-range'),
+            passengers: val('m-pax'),
+            cruise_mach: val('m-mach'),
+            cruise_alt_m: val('m-alt'),
+            loiter_hr: val('m-loiter'),
+            ld_cruise: val('m-ld-cruise'),
+            ld_loiter: val('m-ld-loiter'),
+            sfc_cruise: val('m-sfc-cruise'),
+            sfc_loiter: val('m-sfc-loiter'),
+            crew_weight_kg: val('m-crew-wt'),
+            payload_extra_kg: val('m-extra-payload') || 0,
+        };
+
+        const values = [];
+        for (let i = 0; i < nPts; i++) values.push(sweepMin + i * (sweepMax - sweepMin) / (nPts - 1));
+
+        const promises = values.map(v => {
+            const body = {...baseBody};
+            if (param === 'passengers') body[param] = Math.round(v);
+            else body[param] = v;
+            return fetch('/api/size', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)})
+                .then(r => r.json())
+                .then(d => ({val: v, W0: d.W0_kg || null, error: d.error}));
+        });
+        const results = await Promise.all(promises);
+
+        const xData = results.filter(r => r.W0).map(r => r.val);
+        const yData = results.filter(r => r.W0).map(r => r.W0);
+
+        // Find baseline W0
+        const baseResult = results.find(r => Math.abs(r.val - baseline) < Math.abs(values[1] - values[0]) * 0.6);
+        const baseW0 = baseResult ? baseResult.W0 : yData[Math.floor(yData.length / 2)];
+
+        const traces = [{
+            x: xData, y: yData, mode: 'lines+markers', name: 'W0',
+            line: {color: '#89b4fa', width: 2}, marker: {size: 5, color: '#89b4fa'},
+        }];
+        if (baseResult) {
+            traces.push({
+                x: [baseline], y: [baseW0], mode: 'markers', name: 'BASELINE',
+                marker: {size: 14, color: '#fab387', symbol: 'diamond', line: {color: '#fff', width: 1}},
+            });
+        }
+
+        Plotly.newPlot('chart-trade', traces, pfdLayout({
+            title: {text: param.toUpperCase().replace(/_/g, ' ') + ' TRADE STUDY', font: {size: 13}},
+            xaxis: {title: param.toUpperCase().replace(/_/g, ' ')},
+            yaxis: {title: 'W0 (KG)'},
+        }), PFD_CONFIG);
+
+        // Sensitivity: dW0/dparam at baseline
+        if (xData.length >= 3 && baseW0) {
+            // Central difference near baseline
+            let sens = 'N/A';
+            const bIdx = xData.findIndex(v => Math.abs(v - baseline) < Math.abs(values[1] - values[0]) * 0.6);
+            if (bIdx > 0 && bIdx < xData.length - 1) {
+                const dParam = (xData[bIdx + 1] - xData[bIdx - 1]) / baseline;
+                const dW0 = (yData[bIdx + 1] - yData[bIdx - 1]) / baseW0;
+                sens = (dW0 / dParam).toFixed(3);
+            }
+            $('trade-metrics').innerHTML = `
+                <div class="metric-card highlight"><div class="metric-label">SENSITIVITY</div><div class="metric-value" style="font-size:1.1rem;">${sens}</div><div class="metric-sub">%dW0 / %d${param.toUpperCase()}</div></div>
+                <div class="metric-card"><div class="metric-label">BASELINE W0</div><div class="metric-value" style="font-size:1.1rem;">${fmt(baseW0, 0)} KG</div></div>`;
+        }
+
+        setStatus('TRADE STUDY COMPLETE', 'var(--green)');
+    } catch (e) {
+        setStatus('TRADE STUDY ERROR: ' + e.message, 'var(--red)');
+    } finally {
+        $('btn-trade').disabled = false;
+    }
+};
+
+// --- Update trade study defaults when parameter changes ---
+document.getElementById('ts-param').addEventListener('change', function() {
+    const defaults = {
+        range_km: {baseline: 5765, min: 3000, max: 9000},
+        passengers: {baseline: 162, min: 100, max: 250},
+        cruise_mach: {baseline: 0.785, min: 0.7, max: 0.88},
+        ld_cruise: {baseline: 17.5, min: 12, max: 22},
+        sfc_cruise: {baseline: 0.575, min: 0.45, max: 0.70},
+        payload_extra_kg: {baseline: 0, min: 0, max: 10000},
+    };
+    const d = defaults[this.value];
+    if (d) {
+        $('ts-baseline').value = d.baseline;
+        $('ts-min').value = d.min;
+        $('ts-max').value = d.max;
+    }
+});
+
+// --- Report ---
+AeroSizer.generateReport = function() {
+    const d = AeroSizer.data;
+    let html = '';
+
+    html += '<div class="section-header">SIZING SUMMARY</div>';
+    if (d.sizing) {
+        const s = d.sizing;
+        html += `<table class="data-table" style="max-width:500px;">
+            <tr><td>W0 (TOGW)</td><td class="num">${fmt(s.W0_kg,0)} KG / ${fmt(kgToLb(s.W0_kg),0)} LB</td></tr>
+            <tr><td>WE (EMPTY)</td><td class="num">${fmt(s.We_kg,0)} KG / ${fmt(kgToLb(s.We_kg),0)} LB</td></tr>
+            <tr><td>WF (FUEL)</td><td class="num">${fmt(s.Wf_kg,0)} KG / ${fmt(kgToLb(s.Wf_kg),0)} LB</td></tr>
+            <tr><td>PAYLOAD</td><td class="num">${fmt(s.W_payload_kg,0)} KG</td></tr>
+            <tr><td>CREW</td><td class="num">${fmt(s.W_crew_kg,0)} KG</td></tr>
+            <tr><td>WE/W0</td><td class="num">${(s.We_fraction*100).toFixed(1)}%</td></tr>
+            <tr><td>WF/W0</td><td class="num">${(s.Wf_fraction*100).toFixed(1)}%</td></tr>
+            <tr><td>L/D CRUISE</td><td class="num">${s.ld_cruise}</td></tr>
+            <tr><td>SFC CRUISE</td><td class="num">${s.sfc_cruise}</td></tr>
+            <tr><td>ITERATIONS</td><td class="num">${s.iterations}</td></tr>
+        </table>`;
+    } else {
+        html += '<div style="color:var(--green-dim);">NO SIZING DATA -- RUN SIZING FIRST</div>';
+    }
+
+    if (d.constraints) {
+        html += '<div class="section-header mt-1">CONSTRAINT ANALYSIS</div>';
+        const dp = d.constraints.design_point;
+        html += `<table class="data-table" style="max-width:400px;">
+            <tr><td>DESIGN W/S</td><td class="num">${(dp.ws/9.81).toFixed(0)} KG/M2</td></tr>
+            <tr><td>DESIGN T/W</td><td class="num">${dp.tw.toFixed(4)}</td></tr>
+        </table>`;
+    }
+
+    if (d.weights) {
+        html += '<div class="section-header mt-1">WEIGHT BREAKDOWN</div>';
+        html += `<div style="color:var(--green-dim);">WE TOTAL = ${fmt(d.weights.We_total_kg,0)} KG (${(d.weights.We_fraction*100).toFixed(1)}% W0)</div>`;
+    }
+
+    if (d.dapca) {
+        html += '<div class="section-header mt-1">COST ESTIMATION</div>';
+        html += `<table class="data-table" style="max-width:400px;">
+            <tr><td>UNIT FLYAWAY</td><td class="num">$${fmt(d.dapca.per_unit.flyaway,0)}</td></tr>
+            <tr><td>PROGRAM TOTAL</td><td class="num">$${fmt(d.dapca.totals.program,0)}</td></tr>
+        </table>`;
+    }
+
+    $('report-content').innerHTML = html || '<div style="color:var(--green-dim);">NO DATA AVAILABLE</div>';
+};
+
+AeroSizer.exportJSON = function() {
+    const blob = new Blob([JSON.stringify(AeroSizer.data, null, 2)], {type: 'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'aerosizer_results.json'; a.click();
+    URL.revokeObjectURL(url);
+};
+
+// --- Auto-load SVG on page load ---
+window.addEventListener('DOMContentLoaded', () => {
+    // Delay SVG load slightly to let page render
+    setTimeout(() => AeroSizer.updateAircraftViews(), 500);
+});
+</script>
+</body>
+</html>
